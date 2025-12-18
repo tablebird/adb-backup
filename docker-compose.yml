@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  adb-backup:
+    container_name: adb-backup
+    image: tablebird/adb-backup
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes: 
+      - /dev/bus/usb:/dev/bus/usb
+    privileged: true
