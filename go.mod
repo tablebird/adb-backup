@@ -1,4 +1,4 @@
-module adb_backup
+module adb-backup
 
 go 1.25.5
 

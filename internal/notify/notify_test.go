@@ -1,6 +1,7 @@
-package main
+package notify
 
 import (
+	"adb-backup/internal/database"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -35,7 +36,7 @@ func TestNotifySms(t *testing.T) {
 	webhook := Webhook{
 		Url: server.URL,
 	}
-	sms := Sms{
+	sms := database.Sms{
 		Uid:     "1231231231",
 		Address: "911",
 		Body:    "test",

@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"os"
@@ -7,6 +7,8 @@ import (
 
 	adb "github.com/zach-klippenstein/goadb"
 )
+
+var Conf = Config{}
 
 type Config struct {
 	AdbPort   int
@@ -24,7 +26,7 @@ type Config struct {
 	NotifyWebhookUrl string
 }
 
-func (c *Config) initConfig() {
+func (c *Config) InitConfig() {
 	initEnv()
 	c.AdbPort = getIntEnv("ADB_PORT", adb.AdbPort)
 	c.DbHost = getEnvOrDefault("DB_HOST", "postgres.lan")

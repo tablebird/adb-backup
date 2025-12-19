@@ -1,6 +1,8 @@
-package main
+package sync
 
 import (
+	"adb-backup/internal/database"
+	"adb-backup/internal/utils"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,9 +22,9 @@ func TestSmsDecode(t *testing.T) {
 		"body":           "Hey, are we still meeting at the café at 3 PM today?",
 		"address":        "1234567890",
 	}
-	var sms Sms
+	var sms database.Sms
 
-	err := sms.Decode(data)
+	err := utils.MapDecode(data, &sms)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, sms.Id)
 	assert.Equal(t, "1", sms.ThreadId)

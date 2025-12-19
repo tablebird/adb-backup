@@ -1,4 +1,4 @@
-package main
+package database
 
 import (
 	"time"
@@ -13,4 +13,14 @@ type Device struct {
 	Usb       string `gorm:"comment:设备USB信息"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+func FindDevice(serials []string) ([]Device, error) {
+	var devices []Device
+	err := db.Where("serial IN ?", serials).Find(&devices).Error
+	return devices, err
+}
+
+func CreateDevice(device *Device) error {
+	return db.Create(&device).Error
 }
