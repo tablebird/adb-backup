@@ -1,0 +1,27 @@
+{{ define "tailwind/config" }}
+<script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    primary: '#3b82f6',
+                    success: '#10b981',
+                    warning: '#f59e0b',
+                    danger: '#ef4444',
+                    dark: '#1e293b',
+                    light: '#f8fafc',
+                    secondary: '#f3f4f6',
+                    send: '#dcf8c6',
+                    receive: '#ffffff',
+                    card: '#1e293b',
+                    cardSecondary: '#334155'
+                },
+                fontFamily: {
+                    inter: ['Inter', 'system-ui', 'sans-serif'],
+                },
+            }
+        }
+    }
+</script>
+{{ end }}

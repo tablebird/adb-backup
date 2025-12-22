@@ -29,6 +29,8 @@ RUN apk --no-cache add wget ca-certificates libc6-compat \
 
 ENV PATH=$PATH:/opt/platform-tools
 
+ENV GIN_MODE=release
+
 RUN mkdir -m 0750 /root/.android
 
 COPY files/adbkey /root/.android/adbkey

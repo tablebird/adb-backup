@@ -15,6 +15,12 @@ type Device struct {
 	UpdatedAt time.Time
 }
 
+func FindAllDevices() ([]Device, error) {
+	var devices []Device
+	err := db.Find(&devices).Error
+	return devices, err
+}
+
 func FindDevice(serials []string) ([]Device, error) {
 	var devices []Device
 	err := db.Where("serial IN ?", serials).Find(&devices).Error

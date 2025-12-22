@@ -6,6 +6,7 @@ import (
 	"adb-backup/internal/device"
 	"adb-backup/internal/log"
 	"adb-backup/internal/notify"
+	"adb-backup/internal/web"
 )
 
 func main() {
@@ -19,5 +20,6 @@ func main() {
 		}
 	}
 	database.InitDB()
+	go web.InitWeb()
 	device.StartWatch()
 }

@@ -1,0 +1,71 @@
+package shell
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestParseWifiInfoSsidUnknown(t *testing.T) {
+	res := `
+mLinkProperties {LinkAddresses: [ ] DnsAddresses: [ ] Domains: null MTU: 0 Routes: [ ]}
+mWifiInfo SSID: <unknown ssid>, BSSID: <none>, MAC: 02:00:00:00:00:00, Security type: -1, Supplicant state: DISCONNECTED, Wi-Fi standard: 0, RSSI: -127, Link speed: -1Mbps, Tx Link speed: -1Mbps, Max Supported Tx Link speed: -1Mbps, Rx Link speed: -1Mbps, Max Supported Rx Link speed: -1Mbps, Frequency: -1MHz, Net ID: -1, Metered hint: false, score: 0, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 0
+mDhcpResultsParcelable baseConfiguration nullleaseDuration 0mtu 0serverAddress nullserverHostName nullvendorInfo null
+`
+	ssid := _parseWifiInfoSsid(res)
+	assert.Equal(t, ssid, "")
+}
+
+func TestParseWifiInfoSsid(t *testing.T) {
+	res := `
+mLinkProperties {LinkAddresses: [ ] DnsAddresses: [ ] Domains: null MTU: 0 Routes: [ ]}
+mWifiInfo SSID: "wifi ssid", BSSID: <none>, MAC: 02:00:00:00:00:00, Security type: -1, Supplicant state: DISCONNECTED, Wi-Fi standard: 0, RSSI: -127, Link speed: -1Mbps, Tx Link speed: -1Mbps, Max Supported Tx Link speed: -1Mbps, Rx Link speed: -1Mbps, Max Supported Rx Link speed: -1Mbps, Frequency: -1MHz, Net ID: -1, Metered hint: false, score: 0, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 0
+mDhcpResultsParcelable baseConfiguration nullleaseDuration 0mtu 0serverAddress nullserverHostName nullvendorInfo null
+`
+	ssid := _parseWifiInfoSsid(res)
+	assert.Equal(t, ssid, "wifi ssid")
+}
+
+func TestParseBatteryLevel(t *testing.T) {
+	res := `
+level: 80
+`
+	level := _parseBatteryLevel(res)
+	assert.Equal(t, level, 80)
+}
+
+func TestParseBatteryLevelZero(t *testing.T) {
+	res := `
+a: b
+b: c
+`
+	level := _parseBatteryLevel(res)
+	assert.Equal(t, level, 0)
+}
+
+func TestParseBatteryPoweredType(t *testing.T) {
+	res := `
+  AC powered: false
+  USB powered: true
+  Wireless powered: false
+`
+	powereds := _parseBatteryPoweredType(res)
+	assert.Equal(t, len(powereds), 1)
+	assert.Equal(t, powereds[0], BatteryPoweredTypeUSB)
+}
+
+func TestParseBatteryPoweredTypeAll(t *testing.T) {
+	res := `
+  AC powered: true
+  USB powered: true
+  Wireless powered: true
+`
+	powereds := _parseBatteryPoweredType(res)
+	assert.Equal(t, len(powereds), 3)
+	assert.Equal(t, powereds[0], BatteryPoweredTypeAC)
+	assert.Equal(t, powereds[0].String(), "AC")
+	assert.Equal(t, powereds[1], BatteryPoweredTypeUSB)
+	assert.Equal(t, powereds[1].String(), "USB")
+	assert.Equal(t, powereds[2], BatteryPoweredTypeWireless)
+	assert.Equal(t, powereds[2].String(), "Wireless")
+}

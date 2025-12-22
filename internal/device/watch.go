@@ -6,6 +6,7 @@ import (
 	"adb-backup/internal/log"
 	"adb-backup/internal/notify"
 	sy "adb-backup/internal/sync"
+	"slices"
 	"sync"
 
 	adb "github.com/zach-klippenstein/goadb"
@@ -15,13 +16,24 @@ import (
 
 var (
 	client *adb.Adb
-	// 同步的设备列表
-	syncingDevices = make(map[string]sy.SmsSync)
+	// 设备同步列表
+	syncing = make(map[string]sy.SmsSync)
+
+	connectDevices = make(map[string]*adb.Device)
 
 	devicesMutex = sync.RWMutex{}
 )
 
+func GetSyncing() map[string]sy.SmsSync {
+	return syncing
+}
+
+func GetConnectDevices() map[string]*adb.Device {
+	return connectDevices
+}
+
 func StartWatch() {
+
 	initClient()
 	// 启动轮询检查设备
 	ticker := time.NewTicker(config.Conf.WaitDeviceInterval)
@@ -44,6 +56,11 @@ func checkAndSyncDevices() {
 	for _, device := range devices {
 		currentSerials = append(currentSerials, device.Serial)
 	}
+	for di := range connectDevices {
+		if !slices.Contains(currentSerials, di) {
+			delete(connectDevices, di)
+		}
+	}
 
 	// 查询数据库中的设备
 	var dbDevices, er = database.FindDevice(currentSerials)
@@ -55,6 +72,7 @@ func checkAndSyncDevices() {
 	for _, deviceInfo := range devices {
 		handleDevice(deviceInfo, dbDevices)
 	}
+
 }
 
 func handleDevice(deviceInfo *adb.DeviceInfo, dbDevices []database.Device) {
@@ -62,13 +80,15 @@ func handleDevice(deviceInfo *adb.DeviceInfo, dbDevices []database.Device) {
 
 	// 检查设备是否已在同步
 	devicesMutex.RLock()
-	if _, ok := syncingDevices[serial]; ok {
+	if _, ok := syncing[serial]; ok {
 		devicesMutex.RUnlock()
 		return // 已在同步，跳过
 	}
 	devicesMutex.RUnlock()
 
 	adbDevice := client.Device(adb.DeviceWithSerial(serial))
+
+	connectDevices[serial] = adbDevice
 
 	state, err := adbDevice.State()
 	if err != nil {
@@ -121,7 +141,7 @@ func handleDevice(deviceInfo *adb.DeviceInfo, dbDevices []database.Device) {
 		NewNotify: notify.Notify,
 		Device:    adbDevice,
 	}
-	syncingDevices[serial] = smsSync
+	syncing[serial] = smsSync
 	devicesMutex.Unlock()
 
 	// 启动异步同步任务
@@ -129,7 +149,7 @@ func handleDevice(deviceInfo *adb.DeviceInfo, dbDevices []database.Device) {
 		defer func() {
 			// 同步完成后清除设备标记
 			devicesMutex.Lock()
-			delete(syncingDevices, dev.Serial)
+			delete(syncing, dev.Serial)
 			devicesMutex.Unlock()
 		}()
 		// 执行同步，如果失败则提前返回

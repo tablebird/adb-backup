@@ -15,6 +15,10 @@ import (
 
 var db *gorm.DB
 
+func GetDB() *gorm.DB {
+	return db
+}
+
 func InitDB() {
 	var conf = config.Conf
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",

@@ -7,6 +7,8 @@ import (
 	"adb-backup/internal/notify"
 	"adb-backup/internal/utils"
 
+	"adb-backup/internal/shell"
+
 	"fmt"
 	"time"
 
@@ -25,15 +27,15 @@ type SmsSync struct {
 
 	smsLastDate time.Time
 
-	contentQuery ContentQuery
+	contentQuery shell.ContentQuery
 }
 
 func (s *SmsSync) SyncSms() error {
 	serial := s.DbDevice.Serial
 	deviceId := s.DbDevice.Id
-	contentQuery := ContentQuery{
-		uri:  uriSms,
-		sort: "date",
+	contentQuery := shell.ContentQuery{
+		Uri:  shell.CONTENT_QUERY_URI_SMS,
+		Sort: "date",
 	}
 	s.contentQuery = contentQuery
 	s.startSyncDate = time.Now()
@@ -43,7 +45,7 @@ func (s *SmsSync) SyncSms() error {
 
 	for {
 		if !s.smsLastDate.IsZero() {
-			contentQuery.where = fmt.Sprintf("date>%d", s.smsLastDate.UnixMilli())
+			contentQuery.Where = fmt.Sprintf("date>%d", s.smsLastDate.UnixMilli())
 		}
 		result, err := contentQuery.QueryRow(s.Device)
 		if err != nil {
@@ -52,10 +54,10 @@ func (s *SmsSync) SyncSms() error {
 		var messages []database.Sms
 		for _, item := range result {
 			var sms database.Sms
-			utils.MapDecode(parseItem(item), &sms)
+			utils.MapDecode(shell.ContentQueryParseItem(item), &sms)
 			sms.Uid = uuid.New().String()
 			sms.DeviceId = deviceId
-			sms.OrgStr = cleanString(item)
+			sms.OrgStr = utils.CleanString(item)
 			if sms.Date.Sub(s.smsLastDate) > 0 {
 				s.smsLastDate = sms.Date
 			}

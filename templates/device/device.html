@@ -1,0 +1,249 @@
+{{ define "device" }}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADB Backup</title>
+    <!-- 引入Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 引入flag icon -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icon-css@4.1.7/css/flag-icons.min.css">
+    
+    <!-- 自定义配置 -->
+    {{ template "tailwind/config" }}
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .device-card {
+                @apply bg-white dark:bg-dark rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 dark:border-gray-800;
+            }
+            .status-badge {
+                @apply px-3 py-1 rounded-full text-xs font-medium;
+            }
+            .device-info-item {
+                @apply flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300;
+            }
+            .animate-fade-in {
+                animation: fadeIn 0.5s ease-in-out;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 font-inter text-gray-800 dark:text-gray-200 min-h-screen">
+    <!-- 顶部导航 -->
+    <header class="bg-white dark:bg-dark shadow-sm sticky top-0 z-10">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-mobile-phone text-2xl text-primary" aria-hidden="true"></i>
+                <h1 class="text-xl font-bold">ADB Backup</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="refreshBtn" class="flex items-center space-x-1 px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors">
+                    <i class="fa fa-refresh" aria-hidden="true"></i>
+                    <span>刷新设备</span>
+                </button>
+                {{ template "themeToggle/button" }}
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- 设备统计信息 -->
+        <div class="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white dark:bg-dark rounded-xl shadow p-4 border border-gray-100 dark:border-gray-800">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">总设备数</h3>
+                    <i class="fa fa-mobile text-primary"></i>
+                </div>
+                <p class="text-2xl font-bold mt-2">{{ .TotalCount }}</p>
+            </div>
+            <div class="bg-white dark:bg-dark rounded-xl shadow p-4 border border-gray-100 dark:border-gray-800">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">在线设备</h3>
+                    <i class="fa fa-check-circle text-success"></i>
+                </div>
+                <p class="text-2xl font-bold mt-2">{{ .OnlineCount }}</p>
+            </div>
+            <div class="bg-white dark:bg-dark rounded-xl shadow p-4 border border-gray-100 dark:border-gray-800">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">离线设备</h3>
+                    <i class="fa fa-times-circle text-danger"></i>
+                </div>
+                <p class="text-2xl font-bold mt-2">{{ .OfflineCount }}</p>
+            </div>
+        </div>
+
+        <!-- 设备列表 -->
+        {{ if .Devices }}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {{ range .Devices }}
+            <div class="device-card animate-fade-in" style="animation-delay: {{ printf "%d00ms" .Index }}">
+                <!-- 设备头部 -->
+                <div class="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                    <div class="flex justify-between items-center">
+                        <h2 class="font-bold text-lg">{{ .Product }} {{ .Model }}</h2>
+                        {{ if .Sync }}
+                        <span class="status-badge bg-success/10 text-success">
+                            <i class="fa fa-circle text-xs mr-1"></i>消息同步中
+                        </span>
+                        {{ else if eq .Status "StateOnline" }}
+                        <span class="status-badge bg-success/10 text-success">
+                            <i class="fa fa-circle text-xs mr-1"></i>在线
+                        </span>
+                        {{ else if eq .Status "StateUnauthorized" }}
+                        <span class="status-badge bg-success/10 text-warning">
+                            <i class="fa fa-circle text-xs mr-1"></i>未授权
+                        </span>
+                        {{ else }}
+                        <span class="status-badge bg-danger/10 text-danger">
+                            <i class="fa fa-circle text-xs mr-1"></i>离线
+                        </span>
+                        {{ end }}
+                    </div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">设备ID: {{ .Id }}</p>
+                </div>
+
+                <!-- 设备详情 -->
+                <div class="p-5">
+                    <!-- 运营商信息 -->
+                    <div class="mb-4">
+                        <h4 class="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">运营商信息</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-{{ if gt (len .Sims) 1 }}2{{else}}1{{end}} gap-2">
+                            {{ range $index, $sim := .Sims }}
+                            <div class="device-info-item bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
+                                <i class="fa fa-signal text-primary">
+                                    <span class="text-xs">{{ if $sim.NetworkType }} {{ $sim.NetworkType }}{{ end }}</span>
+                                </i>
+                                <div>
+                                    <p class="font-medium">SIM {{ add $index 1 }}
+                                        {{ if $sim.Iso }}
+                                            <i class="flag-icon flag-icon-{{ $sim.Iso }}"></i>
+                                        {{ end }}
+                                    </p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ $sim.Operator }}</p>
+                                </div>
+                            </div>
+                            {{ end }}
+                            
+                            {{ if eq (len .Sims) 0 }}
+                            <div class="device-info-item">
+                                <i class="fa fa-info-circle text-gray-400"></i>
+                                <span>无SIM卡信息</span>
+                            </div>
+                            {{ end }}
+                        </div>
+                    </div>
+
+                    <!-- 设备状态详情 -->
+                    <div class="space-y-2">
+                        <div class="device-info-item">
+                            <i class="fa fa-wifi text-primary"></i>
+                            <span>{{ if .WiFiConnected }}已连接 {{ if .WiFiSSID }}({{ .WiFiSSID }}){{ end }}
+                                {{ else }}未连接{{ end }}</span>
+                        </div>
+                        <div class="device-info-item">
+                            <i class="fa fa-battery-three-quarters text-primary"></i>
+                            <span>电量: {{ .Battery }}%
+                                {{ if .Charging }}<i class="fa fa-solid fa-bolt text-success"></i>{{ end }}
+                            </span>
+                        </div>
+                        <div class="device-info-item">
+                            <i class="fa fa-android text-primary"></i>
+                            <span>Android版本: {{ .AndroidVersion }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="px-5 pb-5 flex space-x-3">
+                    <a href="/sms?device_id={{ .Id }}" class="flex-1 py-2 px-4 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors flex items-center justify-center">
+                        <i class="fa fa-envelope-o mr-1"></i>
+                        <span>查看短信</span>
+                    </a>
+                    <button class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                        <i class="fa fa-ellipsis-v"></i>
+                    </button>
+                </div>
+            </div>
+            {{ end }}
+        </div>
+        {{ else }}
+        <!-- 空状态 -->
+        <div class="flex flex-col items-center justify-center py-16 text-center">
+            <div class="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                <i class="fa fa-mobile-phone text-4xl text-gray-400"></i>
+            </div>
+            <h3 class="text-xl font-bold mb-2">暂无设备连接</h3>
+            <p class="text-gray-500 dark:text-gray-400 max-w-md mb-6">请确保ADB服务已启动，并且设备已通过USB或网络连接到电脑</p>
+            <button id="refreshScanDeviceBtn" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center">
+                <i class="fa fa-refresh mr-2"></i>
+                重新扫描设备
+            </button>
+        </div>
+        {{ end }}
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-white dark:bg-dark border-t border-gray-200 dark:border-gray-800 py-4 mt-12">
+        <div class="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            <p>ADB设备管理面板 • 最后刷新时间: {{ .LastRefreshTime }}</p>
+        </div>
+    </footer>
+    {{ template "toast/div" . }}
+    <!-- JavaScript -->
+    <script>
+        {{ template "toast/script" . }}
+        
+        {{ template "themeToggle/script" . }}
+
+        // 刷新按钮动画
+        const refreshBtn = document.getElementById('refreshBtn');
+        refreshBtn.addEventListener('click', function() {
+            this.querySelector('.fa-refresh').classList.add('fa-spin');
+            window.location.reload();
+        });
+        const refreshScanDeviceBtn = document.getElementById('refreshScanDeviceBtn');
+        if (refreshScanDeviceBtn) {
+            refreshScanDeviceBtn.addEventListener('click', function() {
+                this.querySelector('.fa-refresh').classList.add('fa-spin');
+                fetch('/api/device/refreshScan', {
+                    method: 'GET',
+                }).then((response) => {
+                    if (!response.ok) {
+                        throw new Error('刷新失败');
+                    }
+                    return response.json();
+                }).then(data => {
+                    if (data.code == 200) {
+                        window.location.reload();
+                    } else {
+                        showToast(data.msg)
+                        this.querySelector('.fa-refresh').classList.remove('fa-spin');
+                    }
+                }).catch(() => {
+                    this.querySelector('.fa-refresh').classList.remove('fa-spin');
+                });
+            });
+        }
+
+        // 设备卡片悬停效果增强
+        document.querySelectorAll('.device-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-5px)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+</body>
+</html>
+{{ end }}

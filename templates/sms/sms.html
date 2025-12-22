@@ -1,0 +1,542 @@
+{{ define "sms_detail" }}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备短信详情</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    {{ template "tailwind/config" }}
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .conversation-item {
+                @apply flex items-center justify-between p-3 hover:bg-gray-100 dark:hover:bg-cardSecondary rounded-lg transition-colors cursor-pointer border-l-4 border-transparent;
+            }
+            .conversation-active {
+                @apply bg-primary/10 dark:bg-primary/20 border-primary font-medium;
+            }
+            .message-bubble {
+                @apply rounded-lg px-4 py-2 max-w-[70%] shadow-sm text-sm;
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .loading-spinner {
+                @apply w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin;
+            }
+            .text-ellipsis-1 {
+                @apply overflow-hidden text-ellipsis whitespace-nowrap;
+            }
+            .load-tip {
+                @apply py-2 text-xs text-gray-400 text-center;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 font-inter text-gray-800 dark:text-gray-200 h-screen flex flex-col overflow-hidden">
+    <!-- 顶部导航 -->
+    <header class="bg-white dark:bg-card shadow-sm sticky top-0 z-10">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <a href="/" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-cardSecondary transition-colors">
+                    <i class="fa fa-arrow-left text-primary"></i>
+                </a>
+                <div>
+                    <h1 class="text-lg font-bold">短信详情</h1>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">设备ID: {{ .DeviceID }}</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                {{ template "themeToggle/button" }}
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <!-- 左侧会话列表 -->
+        <div class="w-full md:w-80 bg-white dark:bg-card border-r border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+            <div class="p-3 border-b border-gray-200 dark:border-gray-700">
+                <div class="relative">
+                    <input type="text" placeholder="搜索手机号码..." class="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-cardSecondary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" id="searchInput">
+                    <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto scrollbar-hide" id="conversationList">
+                <!-- 加载中 -->
+                <div class="flex items-center justify-center h-20">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧消息内容 -->
+        <div class="flex-1 flex flex-col bg-gray-100 dark:bg-gray-800 overflow-hidden">
+            <!-- 会话头部 -->
+            <div class="p-3 bg-white dark:bg-card border-b border-gray-200 dark:border-gray-700 flex items-center" id="conversationHeader">
+                <h2 class="text-sm font-bold">请选择一个会话</h2>
+            </div>
+
+            <!-- 消息列表容器 -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide" id="messageContainer">
+                <div class="flex flex-col items-center justify-center h-full text-center">
+                    <i class="fa fa-hand-o-left text-4xl text-gray-400 mb-2"></i>
+                    <h3 class="text-sm font-medium">请从左侧选择短信会话</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">选择后将展示该会话的所有消息</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- JavaScript -->
+    <script>
+        // 全局变量
+        const deviceId = "{{ .DeviceID }}";
+        let activeThreadId = 0;
+        const conversationPageSize = 20; // 会话每页加载20条
+        let conversationPage = 1;       // 当前会话页码
+        let hasMoreConversations = true; // 是否还有更多会话
+        let conversationLoading = false; // 会话加载锁
+
+        const messagePageSize = 20;     // 消息每次加载20条
+        let messageOffset = 0;          // 消息偏移量（加载老消息用）
+        let hasMoreMessages = true;     // 是否还有更多老消息
+        let messageLoading = false;     // 消息加载锁
+        let currentConversation = null; // 当前选中的会话信息
+        let addressKeyword = ''; // 会话地址搜索关键词
+
+        {{ template "themeToggle/script" . }}
+
+        // 1. 页面初始化
+        window.onload = function() {
+            // 加载初始会话列表（第1页）
+            loadConversations(true);
+            // 绑定会话列表滚动事件（上滑加载更多）
+            document.getElementById('conversationList').addEventListener('scroll', handleConversationScroll);
+            // 绑定消息列表滚动事件（下滑加载老消息）
+            document.getElementById('messageContainer').addEventListener('scroll', handleMessageScroll);
+            // 搜索框事件
+            document.getElementById('searchInput').addEventListener('input', filterConversations);
+        };
+
+        // 2. 会话列表滚动监听：下滑触底加载更多
+        function handleConversationScroll(e) {
+            const list = e.target;
+            // 检查是否滚动到底部（scrollHeight - scrollTop - clientHeight <= 10）
+            if ((list.scrollHeight - list.scrollTop - list.clientHeight) <= 10 && hasMoreConversations && !conversationLoading) {
+                conversationPage++;
+                loadConversations(false); // 非首次加载，追加到顶部
+            }
+        }
+
+        // 3. 消息列表滚动监听：上滑顶部加载老消息
+        function handleMessageScroll(e) {
+            const list = e.target;
+            // 判断是否滚动到顶部（scrollTop <= 10）
+            if (list.scrollTop <= 10 && hasMoreMessages && !messageLoading && activeThreadId !== 0) {
+                loadMoreOldMessages(); // 加载更多老消息
+            }
+        }
+
+        // 4. 加载会话列表
+        function loadConversations(isFirstLoad) {
+            if (conversationLoading) return;
+            conversationLoading = true;
+
+            // 首次加载显示加载中，非首次添加加载提示
+            const conversationList = document.getElementById('conversationList');
+            if (isFirstLoad) {
+                conversationList.innerHTML = `
+                    <div class="flex items-center justify-center h-20">
+                        <div class="loading-spinner"></div>
+                    </div>
+                `;
+            } else {
+                // 在列表顶部添加加载提示
+                const loadTip = document.createElement('div');
+                loadTip.className = 'load-tip';
+                loadTip.innerHTML = '<div class="loading-spinner mx-auto"></div>';
+                loadTip.id = 'conversationLoadTip';
+                conversationList.appendChild(loadTip);
+            }
+
+            // 发送请求（带分页参数）
+            fetch(`/api/sms/conversations?device_id=${deviceId}&page=${conversationPage}&page_size=${conversationPageSize}&address=${addressKeyword}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('获取会话列表失败');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.code !== 200) {
+                        throw new Error(data.msg || '获取会话列表失败');
+                    }
+
+                    const conversationData = data.data;
+                    hasMoreConversations = conversationData.has_more;
+                    const newConversations = conversationData.list;
+
+                    // 移除加载提示
+                    const loadTip = document.getElementById('conversationLoadTip');
+                    if (loadTip) loadTip.remove();
+
+                    if (isFirstLoad) {
+                        // 首次加载：渲染完整列表
+                        renderConversationList(newConversations);
+                        // 默认选中第一个会话
+                        if (newConversations && newConversations.length > 0) {
+                            const firstItem = conversationList.querySelector('.conversation-item');
+                            currentConversation = newConversations[0];
+                            switchConversation(newConversations[0].thread_id, newConversations[0].address, newConversations[0].sub_id === 1 ? 'SIM1' : 'SIM2', firstItem);
+                        }
+                    } else {
+                        // 非首次加载：插入到列表顶部
+                        prependConversationList(newConversations);
+                    }
+
+                    conversationLoading = false;
+                })
+                .catch(error => {
+                    conversationLoading = false;
+                    hasMoreConversations = false; // 加载失败，不再尝试
+                    // 移除加载提示
+                    const loadTip = document.getElementById('conversationLoadTip');
+                    if (loadTip) loadTip.remove();
+
+                    if (isFirstLoad) {
+                        conversationList.innerHTML = `
+                            <div class="flex flex-col items-center justify-center h-full text-center p-4">
+                                <i class="fa fa-exclamation-circle text-4xl text-danger mb-2"></i>
+                                <h3 class="text-sm font-medium">加载失败</h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">${error.message}</p>
+                                <button class="mt-2 px-3 py-1 bg-primary text-white rounded-lg text-xs" onclick="loadConversations(true)">重试</button>
+                            </div>
+                        `;
+                    } else {
+                        // 顶部添加加载失败提示
+                        const errorTip = document.createElement('div');
+                        errorTip.className = 'load-tip text-danger';
+                        errorTip.innerText = '加载更多会话失败';
+                        conversationList.insertBefore(errorTip, conversationList.firstChild);
+                        // 3秒后移除提示
+                        setTimeout(() => errorTip.remove(), 3000);
+                    }
+                    console.error('加载会话列表错误：', error);
+                });
+        }
+
+        // 5. 渲染会话列表（首次加载）
+        function renderConversationList(conversations) {
+            const conversationList = document.getElementById('conversationList');
+            if (!conversations || conversations.length === 0) {
+                conversationList.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-center p-4">
+                        <i class="fa fa-envelope-o text-4xl text-gray-400 mb-2"></i>
+                        <h3 class="text-sm font-medium">暂无短信会话</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">该设备暂无保存的短信记录</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            conversations.forEach(conversation => {
+                html += `
+                    <div class="conversation-item ${conversation.thread_id === activeThreadId ? 'conversation-active' : ''}" 
+                         data-thread-id="${conversation.thread_id}"
+                         data-address="${conversation.address}"
+                         data-sim="${conversation.sub_id === 0 ? 'SIM1' : 'SIM2'}">
+                        <div class="flex items-start space-x-2 flex-1 max-w-[calc(100%-80px)]">
+                            <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                                <i class="fa fa-phone text-xs text-primary"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="text-sm font-medium text-ellipsis-1">${conversation.address}</h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 text-ellipsis-1">${conversation.last_message}</p>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-400 flex flex-col items-end w-20 flex-shrink-0">
+                            <span class="text-ellipsis-1">${conversation.last_time}</span>
+                            <span class="text-xs bg-primary/10 text-primary px-1 rounded mt-1">${conversation.sub_id === 0 ? 'SIM1' : 'SIM2'}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            conversationList.innerHTML = html;
+
+            // 绑定事件委托
+            conversationList.addEventListener('click', function(e) {
+                const conversationItem = e.target.closest('.conversation-item');
+                if (!conversationItem) return;
+                const threadId = parseInt(conversationItem.getAttribute('data-thread-id'));
+                const address = conversationItem.getAttribute('data-address');
+                const sim = conversationItem.getAttribute('data-sim');
+                // 更新当前会话
+                currentConversation = { threadId, address, sim };
+                switchConversation(threadId, address, sim, conversationItem);
+            });
+        }
+
+        // 6. 追加会话到列表顶部（非首次加载）
+        function prependConversationList(conversations) {
+            if (!conversations || conversations.length === 0) return;
+            const conversationList = document.getElementById('conversationList');
+            const currentScrollTop = conversationList.scrollTop; // 保存当前滚动位置
+
+            let html = '';
+            conversations.forEach(conversation => {
+                html += `
+                    <div class="conversation-item ${conversation.thread_id === activeThreadId ? 'conversation-active' : ''}" 
+                         data-thread-id="${conversation.thread_id}"
+                         data-address="${conversation.address}"
+                         data-sim="${conversation.sub_id === 0 ? 'SIM1' : 'SIM2'}">
+                        <div class="flex items-start space-x-2 flex-1 max-w-[calc(100%-80px)]">
+                            <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                                <i class="fa fa-phone text-xs text-primary"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="text-sm font-medium text-ellipsis-1">${conversation.address}</h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 text-ellipsis-1">${conversation.last_message}</p>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-400 flex flex-col items-end w-20 flex-shrink-0">
+                            <span class="text-ellipsis-1">${conversation.last_time}</span>
+                            <span class="text-xs bg-primary/10 text-primary px-1 rounded mt-1">${conversation.sub_id === 0 ? 'SIM1' : 'SIM2'}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // 插入到底部
+            conversationList.insertAdjacentHTML('beforeend', html);
+        }
+
+        // 7. 切换会话
+        function switchConversation(threadId, address, sim, conversationItem) {
+            // 移除所有会话的活跃状态
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('conversation-active');
+            });
+            
+            if (conversationItem) {
+                conversationItem.classList.add('conversation-active');
+            }
+            
+            // 更新会话头部
+            const conversationHeader = document.getElementById('conversationHeader');
+            conversationHeader.innerHTML = `
+                <h2 class="text-sm font-bold">${address}</h2>
+                <span class="ml-2 text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">${sim}</span>
+            `;
+            
+            // 重置消息加载参数
+            activeThreadId = threadId;
+            messageOffset = 0;
+            hasMoreMessages = true;
+            // 加载当前会话的最新20条消息
+            loadLatestMessages();
+        }
+
+        // 8. 加载当前会话的最新20条消息
+        function loadLatestMessages() {
+            if (messageLoading || activeThreadId === 0) return;
+            messageLoading = true;
+
+            const messageContainer = document.getElementById('messageContainer');
+            // 显示加载中
+            messageContainer.innerHTML = `
+                <div class="flex items-center justify-center h-20">
+                    <div class="loading-spinner"></div>
+                </div>
+            `;
+
+            // 请求最新20条消息
+            fetch(`/api/sms/messages/latest?device_id=${deviceId}&thread_id=${activeThreadId}&page_size=${messagePageSize}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('获取最新消息失败');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.code !== 200) {
+                        messageContainer.innerHTML = `
+                            <div class="flex flex-col items-center justify-center h-full text-center">
+                                <i class="fa fa-comment-o text-4xl text-gray-400 mb-2"></i>
+                                <h3 class="text-sm font-medium">暂无消息内容</h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">${data.msg || '该会话暂无保存的短信消息'}</p>
+                            </div>
+                        `;
+                        messageLoading = false;
+                        return;
+                    }
+
+                    const messages = data.data.messages;
+                    hasMoreMessages = data.data.has_more;
+                    // 渲染消息
+                    renderMessageList(messages);
+                    // 滚动到消息底部
+                    messageContainer.scrollTop = messageContainer.scrollHeight;
+                    messageLoading = false;
+                })
+                .catch(error => {
+                    messageContainer.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full text-center">
+                            <i class="fa fa-exclamation-circle text-4xl text-danger mb-2"></i>
+                            <h3 class="text-sm font-medium">加载失败</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">${error.message}</p>
+                            <button class="mt-2 px-3 py-1 bg-primary text-white rounded-lg text-xs" onclick="loadLatestMessages()">重试</button>
+                        </div>
+                    `;
+                    messageLoading = false;
+                    console.error('加载最新消息错误：', error);
+                });
+        }
+
+        // 9. 加载更多老消息
+        function loadMoreOldMessages() {
+            if (messageLoading || !hasMoreMessages || activeThreadId === 0) return;
+            messageLoading = true;
+            messageOffset += messagePageSize;
+
+            const messageContainer = document.getElementById('messageContainer');
+            // 添加加载提示（顶部）
+            const loadTip = document.createElement('div');
+            loadTip.className = 'load-tip';
+            loadTip.innerHTML = '<div class="loading-spinner mx-auto"></div>';
+            loadTip.id = 'messageLoadTip';
+            messageContainer.insertBefore(loadTip, messageContainer.firstChild);
+
+            // 请求老消息
+            fetch(`/api/sms/messages/old?device_id=${deviceId}&thread_id=${activeThreadId}&offset=${messageOffset}&page_size=${messagePageSize}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('获取老消息失败');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const messageContainer = document.getElementById('messageContainer');
+                    // 记录插入前的高度
+                    const previousHeight = messageContainer.scrollHeight;
+                    const currentScrollTop = messageContainer.scrollTop;
+                    // 记录目前滚动顶部到底部的距离
+                    let preScrollTopToBottom = previousHeight - currentScrollTop;
+                    // 移除加载提示
+                    const loadTip = document.getElementById('messageLoadTip');
+                    if (loadTip) loadTip.remove();
+
+                    if (data.code !== 200) {
+                        hasMoreMessages = false;
+                        messageLoading = false;
+                        return;
+                    }
+
+                    const oldMessages = data.data.messages;
+                    hasMoreMessages = data.data.has_more;
+                    // 追加老消息到列表顶部
+                    prependOldMessages(oldMessages, preScrollTopToBottom);
+                    messageLoading = false;
+                })
+                .catch(error => {
+                    messageLoading = false;
+                    hasMoreMessages = false;
+                    // 移除加载提示
+                    const loadTip = document.getElementById('messageLoadTip');
+                    if (loadTip) loadTip.remove();
+
+                    // 添加失败提示
+                    const errorTip = document.createElement('div');
+                    errorTip.className = 'load-tip text-danger';
+                    errorTip.innerText = '加载更多老消息失败';
+                    messageContainer.insertBefore(errorTip, messageContainer.firstChild);
+                    setTimeout(() => errorTip.remove(), 3000);
+                    console.error('加载老消息错误：', error);
+                });
+        }
+
+        // 10. 渲染最新消息列表
+        function renderMessageList(messages) {
+            const messageContainer = document.getElementById('messageContainer');
+            let html = '';
+            messages.forEach(message => {
+                if (message.sms_type === '1') {
+                    // 接收消息 - 左侧
+                    html += `
+                        <div class="flex items-start justify-start" data-msg-id="${message.thread_id}-${message.date}">
+                            <div class="message-bubble bg-receive dark:bg-card text-gray-800 dark:text-gray-200">
+                                <p class="whitespace-pre-wrap">${message.body}</p>
+                                <p class="text-right text-xs text-gray-400 mt-1">${message.date_format}</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // 发送消息 - 右侧
+                    html += `
+                        <div class="flex items-start justify-end" data-msg-id="${message.thread_id}-${message.date}">
+                            <div class="message-bubble bg-send dark:bg-primary/20 text-gray-800 dark:text-gray-200">
+                                <p class="whitespace-pre-wrap">${message.body}</p>
+                                <p class="text-right text-xs text-gray-400 mt-1">${message.date_format}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            messageContainer.innerHTML = html;
+        }
+
+        // 11. 追加老消息到列表顶部
+        function prependOldMessages(oldMessages, preScrollTopToBottom) {
+            if (!oldMessages || oldMessages.length === 0) return;
+            const messageContainer = document.getElementById('messageContainer');
+
+            let html = '';
+            oldMessages.forEach(message => {
+                if (message.sms_type === '1') {
+                    html += `
+                        <div class="flex items-start justify-start" data-msg-id="${message.thread_id}-${message.date}">
+                            <div class="message-bubble bg-receive dark:bg-card text-gray-800 dark:text-gray-200">
+                                <p>${message.body}</p>
+                                <p class="text-right text-xs text-gray-400 mt-1">${message.date_format}</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="flex items-start justify-end" data-msg-id="${message.thread_id}-${message.date}">
+                            <div class="message-bubble bg-send dark:bg-primary/20 text-gray-800 dark:text-gray-200">
+                                <p>${message.body}</p>
+                                <p class="text-right text-xs text-gray-400 mt-1">${message.date_format}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            // 插入到顶部
+            messageContainer.insertAdjacentHTML('afterbegin', html);
+            const newHeight = messageContainer.scrollHeight;
+
+            messageContainer.scrollTop = newHeight - preScrollTopToBottom;
+        }
+
+        // 12. 过滤会话（模糊搜索）
+        function filterConversations() {
+            const searchText = document.getElementById('searchInput').value.trim().toLowerCase();
+            addressKeyword = encodeURIComponent(searchText);
+            conversationPage = 1;
+            loadConversations(true)
+        }
+    </script>
+</body>
+</html>
+{{ end }}

@@ -1,4 +1,4 @@
-package sync
+package shell
 
 import (
 	"testing"
@@ -28,7 +28,7 @@ If you have any questions, or need an extension, reach out to the project manage
 	count := 0
 	for rowIndex, text := range parseQueryResult(result) {
 		assert.Equal(t, count, rowIndex)
-		itemMap := parseItem(text)
+		itemMap := ContentQueryParseItem(text)
 		assert.Equal(t, 38, len(itemMap))
 		count++
 	}

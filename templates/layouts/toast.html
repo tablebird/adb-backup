@@ -1,0 +1,53 @@
+{{ define "toast/div" }}
+<div id="toastContainer" class="fixed top-20 right-4 flex flex-col items-end space-y-2 z-50"></div>
+{{ end }}
+
+{{ define "toast/script" }}
+/**
+ * 显示动态Toast
+ * @param {string} message 提示内容
+ * @param {string} type 类型：success（成功）/ error（失败）/ info（提示），默认info
+ * @param {number} duration 显示时长（毫秒），默认3000
+ */
+function showToast(message, type = 'info', duration = 3000) {
+    // 1. 创建Toast元素
+    const toast = document.createElement('div');
+    
+    // 2. 根据类型设置样式
+    const typeStyles = {
+        success: 'bg-green-500 text-white', // 绿色背景（成功）
+        error: 'bg-red-500 text-white',     // 红色背景（失败）
+        info: 'bg-blue-500 text-white'      // 蓝色背景（提示）
+    };
+    
+    // 3. 添加基础样式+类型样式
+    toast.className = `
+        px-4 py-2 rounded-lg shadow-lg 
+        transform translate-x-full opacity-0 
+        transition-all duration-300 ease-in-out
+        ${typeStyles[type]}
+    `;
+    toast.innerText = message;
+    
+    // 4. 添加到容器
+    const toastContainer = document.getElementById('toastContainer');
+    toastContainer.appendChild(toast);
+    
+    // 5. 触发淡入滑入动画
+    setTimeout(() => {
+        toast.classList.remove('translate-x-full', 'opacity-0');
+        toast.classList.add('translate-x-0', 'opacity-100');
+    }, 10);
+    
+    // 6. 自动关闭（触发淡出滑出动画）
+    setTimeout(() => {
+        toast.classList.remove('translate-x-0', 'opacity-100');
+        toast.classList.add('translate-x-full', 'opacity-0');
+        
+        // 动画结束后移除元素
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, duration);
+}
+{{ end }}

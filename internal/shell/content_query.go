@@ -1,6 +1,7 @@
-package sync
+package shell
 
 import (
+	"adb-backup/internal/utils"
 	"errors"
 	"iter"
 	"regexp"
@@ -11,41 +12,41 @@ import (
 )
 
 const (
-	uriSms = "content://sms"
+	CONTENT_QUERY_URI_SMS = "content://sms"
 )
 
 type ContentQuery struct {
-	uri string
+	Uri string
 
-	where      string
-	projection string
-	sort       string
-	limit      int
-	offset     int
-	distinct   bool
+	Where      string
+	Projection string
+	Sort       string
+	Limit      int
+	Offset     int
+	Distinct   bool
 }
 
 func (c *ContentQuery) Query(d *adb.Device) (string, error) {
-	if c.uri == "" {
+	if c.Uri == "" {
 		return "", errors.New("uri is empty")
 	}
-	commandStr := "content query --uri " + c.uri
-	if c.where != "" {
-		commandStr += " --where '" + c.where + "'"
+	commandStr := "content query --uri " + c.Uri
+	if c.Where != "" {
+		commandStr += " --where '" + c.Where + "'"
 	}
-	if c.projection != "" {
-		commandStr += " --projection '" + c.projection + "'"
+	if c.Projection != "" {
+		commandStr += " --projection '" + c.Projection + "'"
 	}
-	if c.offset != 0 {
-		commandStr += " --offset " + strconv.Itoa(c.offset)
+	if c.Offset != 0 {
+		commandStr += " --offset " + strconv.Itoa(c.Offset)
 	}
-	if c.sort != "" {
-		commandStr += " --sort '" + c.sort + "'"
+	if c.Sort != "" {
+		commandStr += " --sort '" + c.Sort + "'"
 	}
-	if c.limit != 0 {
-		commandStr += " --limit " + strconv.Itoa(c.limit)
+	if c.Limit != 0 {
+		commandStr += " --limit " + strconv.Itoa(c.Limit)
 	}
-	if c.distinct {
+	if c.Distinct {
 		commandStr += " --distinct"
 	}
 
@@ -77,7 +78,7 @@ func (c *ContentQuery) QueryRowMap(d *adb.Device) (iter.Seq2[int, map[string]str
 	}
 	return func(yield func(int, map[string]string) bool) {
 		for i, item := range result {
-			fields := parseItem(item)
+			fields := ContentQueryParseItem(item)
 			if !yield(i, fields) {
 				return
 			}
@@ -135,13 +136,13 @@ func parseQueryResult(queryResult string) iter.Seq2[int, string] {
 	}
 }
 
-func parseItem(text string) map[string]string {
+func ContentQueryParseItem(text string) map[string]string {
 	fields := make(map[string]string)
 	// 匹配单个字段（如 _id=1, address=10086）
 	fieldRegex := regexp.MustCompile(`^ ?\w+=[\s\S]+`)
 	currentKey := ""
 	currentValue := ""
-	text = cleanString(text)
+	text = utils.CleanString(text)
 	split := strings.Split(text, ",")
 	for i, item := range split {
 		match := fieldRegex.MatchString(item)
@@ -160,11 +161,4 @@ func parseItem(text string) map[string]string {
 		fields[currentKey] = currentValue
 	}
 	return fields
-}
-
-/**
- * 去除字符串中的 NULL 字符
- */
-func cleanString(s string) string {
-	return strings.ReplaceAll(s, "\x00", "")
 }
