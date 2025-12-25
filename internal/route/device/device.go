@@ -111,8 +111,8 @@ func DevicesInfo() gin.HandlerFunc {
 
 					wifi, _ := shell.SettingGetWifiOn(adbDevice)
 					if wifi {
-						wiFiConnected = true
-						wifiSSID, _ = shell.DumpWifiInfoSsid(adbDevice)
+						wifiSSID, err = shell.DumpWifiInfoSsid(adbDevice)
+						wiFiConnected = err == nil
 					}
 					batteryLevel, _ = shell.DumpBatteryLevel(adbDevice)
 					poweredTypes, _ := shell.DumpBatteryPoweredType(adbDevice)
