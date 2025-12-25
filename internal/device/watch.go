@@ -163,14 +163,10 @@ func handleDevice(deviceInfo *adb.DeviceInfo, dbDevices []database.Device) {
 func initClient() {
 	var err error
 	client, err = adb.NewWithConfig(adb.ServerConfig{
+		Host: config.Conf.AdbHost,
 		Port: config.Conf.AdbPort,
 	})
 	if err != nil {
 		log.FatalF("初始化错误： ", err)
-	}
-	err = client.StartServer()
-
-	if err != nil {
-		log.FatalF("启动adb服务错误： ", err)
 	}
 }

@@ -33,6 +33,7 @@ docker 镜像 `tablebird/adb-backup`
 环境变量以及默认值
 -----------------
 
+- `ADB_HOST`: adb server 主机 (默认: localhost)，优先连接此主机的adb服务
 - `ADB_PORT` adb server端口（默认 5037）
 - `DB_HOST` postgres 数据库host （默认 postgres.lan）
 - `DB_PORT` 数据库端口号 （默认 5432）

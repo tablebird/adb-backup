@@ -11,6 +11,7 @@ import (
 var Conf = Config{}
 
 type Config struct {
+	AdbHost   string
 	AdbPort   int
 	DbHost    string
 	DbPort    int
@@ -28,6 +29,7 @@ type Config struct {
 
 func (c *Config) InitConfig() {
 	initEnv()
+	c.AdbHost = getEnvOrDefault("ADB_HOST", "localhost")
 	c.AdbPort = getIntEnv("ADB_PORT", adb.AdbPort)
 	c.DbHost = getEnvOrDefault("DB_HOST", "postgres.lan")
 	c.DbPort = getIntEnv("DB_PORT", 5432)

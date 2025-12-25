@@ -30,6 +30,7 @@ example: [docker-compose.yml](./docker-compose.yml)
 
 ## Environment Variables and Default Values
 
+- `ADB_HOST`: adb server host (default: localhost), Prioritize connecting to adb services for this host address
 - `ADB_PORT`: adb server port (default: 5037)
 - `DB_HOST`: PostgreSQL database host (default: postgres.lan)
 - `DB_PORT`: Database port number (default: 5432)
