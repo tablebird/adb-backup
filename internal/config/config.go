@@ -25,6 +25,8 @@ type Config struct {
 	WaitDeviceInterval time.Duration
 
 	NotifyWebhookUrl string
+
+	WebPort int
 }
 
 func (c *Config) InitConfig() {
@@ -41,6 +43,7 @@ func (c *Config) InitConfig() {
 	c.ReadInterval = time.Second * time.Duration(getIntEnv("READ_INTERVAL", 5))
 	c.WaitDeviceInterval = time.Second * time.Duration(getIntEnv("WAIT_DEVICE_INTERVAL", 10))
 	c.NotifyWebhookUrl = getEnvOrDefault("NOTIFY_WEBHOOK_URL", "")
+	c.WebPort = getIntEnv("WEB_PORT", 8080)
 }
 
 func getEnvOrDefault(key, defaultValue string) string {

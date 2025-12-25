@@ -1,14 +1,17 @@
 package web
 
 import (
+	"adb-backup/internal/config"
 	deviceApi "adb-backup/internal/device"
 	"adb-backup/internal/log"
 	"adb-backup/internal/route/device"
 	"adb-backup/internal/route/sms"
 	smsApi "adb-backup/internal/sms"
+	"adb-backup/internal/utils"
 	tmpl "adb-backup/templates"
 	"html/template"
 
+	"fmt"
 	"strings"
 	"time"
 
@@ -46,5 +49,17 @@ func InitWeb() {
 	r.GET("/api/sms/conversations", smsApi.GetConversationsApiHandler())
 	r.GET("/api/sms/messages/latest", smsApi.GetLatestMessagesApiHandler())
 	r.GET("/api/sms/messages/old", smsApi.GetOldMessagesApiHandler())
-	r.Run(":8080")
+	port := config.Conf.WebPort
+	logWebUrl(port)
+	r.Run(fmt.Sprintf(":%d", port))
+}
+
+func logWebUrl(port int) {
+	ip, err := utils.GetLocalHostIP()
+	if err == nil {
+		log.InfoF("web url: http://%s:%d", ip, port)
+	} else {
+		log.ErrorF("get localhost ip error: %v", err)
+	}
+
 }

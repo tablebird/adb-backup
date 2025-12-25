@@ -45,3 +45,4 @@ docker 镜像 `tablebird/adb-backup`
 - `READ_INTERVAL` 读取消息得间隔 （默认 5s）
 - `WAIT_DEVICE_INTERVAL` 等待Android设备连接的检测间隔 （默认 10）
 - `NOTIFY_WEBHOOK_URL` 开始监听后新的短信的POST通知地址 （默认 空 不通知）
+- `WEB_HOST` web服务监听端口 （默认 8080）
