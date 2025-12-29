@@ -13,8 +13,8 @@ import (
 func main() {
 	log.InfoF("服务启动中....")
 
-	config.Conf.InitConfig()
-	url := config.Conf.NotifyWebhookUrl
+	config.InitConfig()
+	url := config.App.NotifyWebhookUrl
 	if len(url) != 0 {
 		notify.Notify = notify.Webhook{
 			Url: url,
