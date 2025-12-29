@@ -18,13 +18,13 @@ const (
 )
 
 func DebugF(format string, v ...interface{}) {
-	if config.Conf.DebugLog {
+	if config.App.DebugLog {
 		log.Printf(format, v...)
 	}
 }
 
 func Debug(v ...interface{}) {
-	if config.Conf.DebugLog {
+	if config.App.DebugLog {
 		log.Print(v...)
 	}
 }

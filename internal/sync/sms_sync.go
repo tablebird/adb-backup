@@ -69,7 +69,7 @@ func (s *SmsSync) SyncSms() error {
 
 		length := len(messages)
 		if length <= 0 {
-			wait := config.Conf.ReadInterval
+			wait := config.App.ReadInterval
 			log.DebugF("[%s]没有找到新短信 暂停%s 最后一条消息的时间为: %s", serial, wait, s.smsLastDate)
 			time.Sleep(wait)
 		} else {

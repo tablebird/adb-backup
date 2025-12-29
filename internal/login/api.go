@@ -27,12 +27,12 @@ func Login() gin.HandlerFunc {
 		token := generateToken()
 		tokenMap[token] = user.Id
 		c.SetCookie("login_token",
-			token,                    // 令牌值
-			config.Conf.CookieMaxAge, // 有效期（秒）
-			"/",                      // 作用路径
-			"",                       // 作用域名
-			true,                     // Secure（HTTPS下启用）
-			true,                     // HttpOnly
+			token,                   // 令牌值
+			config.Web.CookieMaxAge, // 有效期（秒）
+			"/",                     // 作用路径
+			"",                      // 作用域名
+			true,                    // Secure（HTTPS下启用）
+			true,                    // HttpOnly
 		)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 200,

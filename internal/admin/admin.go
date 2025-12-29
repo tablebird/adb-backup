@@ -13,7 +13,7 @@ func InitAdmin() {
 		return
 	}
 
-	conf := config.Conf
+	conf := config.Web
 	if count == 0 {
 		adminUser := &database.User{
 			Name:     conf.AdminName,

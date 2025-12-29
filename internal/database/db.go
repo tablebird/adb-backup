@@ -20,7 +20,7 @@ func GetDB() *gorm.DB {
 }
 
 func InitDB() {
-	var conf = config.Conf
+	var conf = config.DB
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		conf.DbHost, conf.DbPort, conf.DbUser, conf.DbPass, conf.DbName, conf.DbSSLMode)
 	l.Debug("数据库连接信息： ", dsn)

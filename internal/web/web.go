@@ -58,7 +58,7 @@ func InitWeb() {
 	group.GET("/api/sms/messages/latest", smsApi.GetLatestMessagesApiHandler())
 	group.GET("/api/sms/messages/old", smsApi.GetOldMessagesApiHandler())
 
-	port := config.Conf.WebPort
+	port := config.Web.WebPort
 	logWebUrl(port)
 	r.Run(fmt.Sprintf(":%d", port))
 }

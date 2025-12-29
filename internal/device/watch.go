@@ -36,7 +36,7 @@ func StartWatch() {
 
 	initClient()
 	// 启动轮询检查设备
-	ticker := time.NewTicker(config.Conf.WaitDeviceInterval)
+	ticker := time.NewTicker(config.App.WaitDeviceInterval)
 	defer ticker.Stop()
 
 	log.InfoF("服务已经启动\n开始检测usb设备，请使用usb连接手机并打开<开发者模式>")
@@ -163,8 +163,8 @@ func handleDevice(deviceInfo *adb.DeviceInfo, dbDevices []database.Device) {
 func initClient() {
 	var err error
 	client, err = adb.NewWithConfig(adb.ServerConfig{
-		Host: config.Conf.AdbHost,
-		Port: config.Conf.AdbPort,
+		Host: config.Adb.AdbHost,
+		Port: config.Adb.AdbPort,
 	})
 	if err != nil {
 		log.FatalF("初始化错误： ", err)
