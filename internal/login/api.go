@@ -31,7 +31,7 @@ func Login() gin.HandlerFunc {
 			config.Web.CookieMaxAge, // 有效期（秒）
 			"/",                     // 作用路径
 			"",                      // 作用域名
-			true,                    // Secure（HTTPS下启用）
+			false,                   // Secure（HTTPS下启用）
 			true,                    // HttpOnly
 		)
 		c.JSON(http.StatusOK, gin.H{
