@@ -45,4 +45,11 @@ docker 镜像 `tablebird/adb-backup`
 - `READ_INTERVAL` 读取消息得间隔 （默认 5s）
 - `WAIT_DEVICE_INTERVAL` 等待Android设备连接的检测间隔 （默认 10）
 - `NOTIFY_WEBHOOK_URL` 开始监听后新的短信的POST通知地址 （默认 空 不通知）
-- `WEB_HOST` web服务监听端口 （默认 8080）
+- `WEB_PORT` web服务监听端口 （默认 8080）
+- `LDAP_HOST`: LDAP服务器主机 (默认: 空，不启用LDAP认证)
+- `LDAP_PORT`: LDAP服务器端口 (默认: 389)
+- `LDAP_ENABLE_TLS`: 是否启用TLS (默认: false)
+- `LDAP_BIND_DN`: LDAP绑定DN (默认: 空，不启用LDAP认证)
+- `LDAP_BIND_PASS`: LDAP绑定密码 (默认: 空，不启用LDAP认证)
+- `LDAP_BASE_DN`: LDAP基础DN (默认: 空)
+- `LDAP_USER_FILTER`: LDAP用户过滤器 (默认: 空)
