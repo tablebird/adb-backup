@@ -50,6 +50,7 @@
                     <span>刷新设备</span>
                 </button>
                 {{ template "themeToggle/button" }}
+                {{ template "logout/button" }}
             </div>
         </div>
     </header>
@@ -203,6 +204,8 @@
         {{ template "toast/script" . }}
         
         {{ template "themeToggle/script" . }}
+
+        {{ template "logout/script" . }}
 
         // 刷新按钮动画
         const refreshBtn = document.getElementById('refreshBtn');

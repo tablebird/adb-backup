@@ -1,0 +1,30 @@
+{{define "logout/button"}}
+<button id="loginButton" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+    <i class="fa fa-sign-out" aria-hidden="true"></i>
+</button>
+{{end}}
+
+{{define "logout/script"}}
+const loginButton = document.getElementById('loginButton');
+if (loginButton) {
+    loginButton.addEventListener('click', logout);
+}
+
+function logout() {
+    fetch('/api/logout', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+    }).then(response => response.json())
+        .then(data => {
+        if (data.code === 200) {
+            // 登出成功，跳转到登录页面
+            window.location.href = '/login';
+        } else {
+            showToast(data.msg, "error");
+        }
+        })
+}
+{{end}}

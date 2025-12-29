@@ -37,5 +37,6 @@ func InitDB() {
 	}
 	_db.AutoMigrate(&Sms{})
 	_db.AutoMigrate(&Device{})
+	_db.AutoMigrate(&User{})
 	db = _db
 }

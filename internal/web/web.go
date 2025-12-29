@@ -4,6 +4,8 @@ import (
 	"adb-backup/internal/config"
 	deviceApi "adb-backup/internal/device"
 	"adb-backup/internal/log"
+	"adb-backup/internal/login"
+	"adb-backup/internal/route/auth"
 	"adb-backup/internal/route/device"
 	"adb-backup/internal/route/sms"
 	smsApi "adb-backup/internal/sms"
@@ -43,12 +45,19 @@ func InitWeb() {
 	})
 	r.HTMLRender = tmpl.GetHTMLRender(r.FuncMap, render.Delims{Left: "{{", Right: "}}"})
 
-	r.GET("/", device.DevicesInfo())
-	r.GET("/api/device/refreshScan", deviceApi.RefreshScanDevice())
-	r.GET("/sms", sms.SmsPage())
-	r.GET("/api/sms/conversations", smsApi.GetConversationsApiHandler())
-	r.GET("/api/sms/messages/latest", smsApi.GetLatestMessagesApiHandler())
-	r.GET("/api/sms/messages/old", smsApi.GetOldMessagesApiHandler())
+	r.GET("/login", login.NotAuthMiddleware(), auth.LoginPage())
+	r.POST("/api/login", login.Login())
+	r.POST("/api/logout", login.LoginOut())
+
+	group := r.Group("/", login.AuthMiddleware())
+
+	group.GET("/", device.DevicesInfo())
+	group.GET("/api/device/refreshScan", deviceApi.RefreshScanDevice())
+	group.GET("/sms", sms.SmsPage())
+	group.GET("/api/sms/conversations", smsApi.GetConversationsApiHandler())
+	group.GET("/api/sms/messages/latest", smsApi.GetLatestMessagesApiHandler())
+	group.GET("/api/sms/messages/old", smsApi.GetOldMessagesApiHandler())
+
 	port := config.Conf.WebPort
 	logWebUrl(port)
 	r.Run(fmt.Sprintf(":%d", port))

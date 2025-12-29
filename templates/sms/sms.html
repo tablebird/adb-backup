@@ -62,6 +62,7 @@
             </div>
             <div class="flex items-center space-x-2">
                 {{ template "themeToggle/button" }}
+                {{ template "logout/button" }}
             </div>
         </div>
     </header>
@@ -120,6 +121,8 @@
         let isMobile = window.innerWidth < 768;
 
         {{ template "themeToggle/script" . }}
+
+        {{ template "logout/script" }}
 
         // 1. 页面初始化
         window.onload = function() {

@@ -8,6 +8,10 @@
 {{ define "themeToggle/script" }}
 // 深色模式切换 - 关键修复3：优化切换逻辑
 const themeToggle = document.getElementById('themeToggle');
+if (themeToggle) {
+    // 绑定主题切换事件
+    themeToggle.addEventListener('click', toggleTheme);
+}
 const html = document.documentElement;
 const body = document.body;
 
@@ -42,6 +46,4 @@ function toggleTheme() {
 // 初始化主题
 initTheme();
 
-// 绑定主题切换事件
-themeToggle.addEventListener('click', toggleTheme);
 {{ end }}

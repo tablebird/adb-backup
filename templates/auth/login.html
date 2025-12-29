@@ -1,0 +1,171 @@
+{{ define "login" }}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    {{ template "tailwind/config" }}
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .loading-spinner {
+                @apply w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin;
+            }
+            .text-ellipsis-1 {
+                @apply overflow-hidden text-ellipsis whitespace-nowrap;
+            }
+            
+            /* 登录页面专属样式 */
+            .login-container {
+                @apply min-h-screen bg-gray-50 dark:bg-gray-900 font-inter text-gray-800 dark:text-gray-200 flex items-center justify-center p-4;
+            }
+            .login-card {
+                @apply bg-white dark:bg-card rounded-lg shadow-sm w-full max-w-md border border-gray-200 dark:border-gray-700 overflow-hidden;
+            }
+            .login-header {
+                @apply p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-cardSecondary;
+            }
+            .login-form {
+                @apply p-6 space-y-4;
+            }
+            .form-label {
+                @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5;
+            }
+            .form-input {
+                @apply w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors text-sm bg-white dark:bg-card;
+            }
+            .btn-primary {
+                @apply w-full bg-primary text-white py-2 rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm flex items-center justify-center gap-2;
+            }
+            .error-tip {
+                @apply text-danger text-xs mt-1;
+            }
+        }
+    </style>
+</head>
+<body class="login-container">
+    <div class="login-card">
+        <!-- 登录卡片头部 -->
+        <div class="login-header">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-android text-primary text-xl"></i>
+                <h1 class="text-lg font-bold">adb backup</h1>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">请登录以继续使用</p>
+        </div>
+
+        <!-- 登录表单 -->
+        <form id="loginForm" class="login-form">
+            <!-- 用户名 -->
+            <div>
+                <label class="form-label" for="username">
+                    <i class="fa fa-user mr-1 text-gray-500 dark:text-gray-400"></i> 用户名
+                </label>
+                <input type="text" id="username" name="username" class="form-input" placeholder="请输入用户名" required>
+                <div id="usernameError" class="error-tip hidden"></div>
+            </div>
+
+            <!-- 密码 -->
+            <div>
+                <label class="form-label" for="password">
+                    <i class="fa fa-lock mr-1 text-gray-500 dark:text-gray-400"></i> 密码
+                </label>
+                <input type="password" id="password" name="password" class="form-input" placeholder="请输入密码" required>
+                <div id="passwordError" class="error-tip hidden"></div>
+            </div>
+
+            <!-- 认证来源 -->
+            <div>
+                <label class="form-label" for="authSource">
+                    <i class="fa fa-building-o mr-1 text-gray-500 dark:text-gray-400"></i> 认证来源
+                </label>
+                <select id="authSource" name="authSource" class="form-input" required>
+                    <option value="0">本地认证</option>
+                </select>
+                <div id="authSourceError" class="error-tip hidden"></div>
+            </div>
+
+            <!-- 登录按钮 -->
+            <button type="submit" class="btn-primary mt-4" id="loginBtn">
+                <i class="fa fa-sign-in"></i> 登录
+            </button>
+        </form>
+    </div>
+    {{ template "toast/div" . }}
+    <script>
+        {{ template "toast/script" . }}
+
+        {{ template "themeToggle/script" . }}
+
+        // 登录表单提交处理
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+        
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<div class="loading-spinner"></div> 登录中...';
+            
+            // 清空错误提示
+            document.querySelectorAll('.error-tip').forEach(el => {
+                el.classList.add('hidden');
+                el.innerText = '';
+            });
+
+            try {
+                // 获取表单数据
+                const formData = new FormData(loginForm);
+                const data = {
+                    username: formData.get('username'),
+                    password: formData.get('password'),
+                    auth_source: formData.get('authSource')
+                };
+
+                // 提交登录请求
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                    credentials: 'include' // 携带Cookie
+                });
+
+                const result = await response.json();
+                
+                if (result.code === 200) {
+                    // 登录成功，跳转到首页
+                    const urlParams = new URLSearchParams(window.location.search);
+                    // 获取特定参数值
+                    const redirectParam = urlParams.get('redirect');
+
+                    window.location.href = redirectParam || '/';
+                } else {
+                    // 显示错误信息
+                    showToast(result.msg || '登录失败，请重试');
+                }
+            } catch (error) {
+                showToast('网络异常，请检查连接');
+                console.error('登录请求失败：', error);
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fa fa-sign-in"></i> 登录';
+            }
+        });
+    </script>
+</body>
+</html>
+{{ end }}

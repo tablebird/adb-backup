@@ -27,6 +27,11 @@ type Config struct {
 	NotifyWebhookUrl string
 
 	WebPort int
+
+	AdminName     string
+	AdminPassword string
+
+	CookieMaxAge int
 }
 
 func (c *Config) InitConfig() {
@@ -44,6 +49,11 @@ func (c *Config) InitConfig() {
 	c.WaitDeviceInterval = time.Second * time.Duration(getIntEnv("WAIT_DEVICE_INTERVAL", 10))
 	c.NotifyWebhookUrl = getEnvOrDefault("NOTIFY_WEBHOOK_URL", "")
 	c.WebPort = getIntEnv("WEB_PORT", 8080)
+
+	c.AdminName = getEnvOrDefault("ADMIN_NAME", "admin")
+	c.AdminPassword = getEnvOrDefault("ADMIN_PASSWORD", "admin")
+
+	c.CookieMaxAge = getIntEnv("COOKIE_MAX_AGE", 86400) // 24h
 }
 
 func getEnvOrDefault(key, defaultValue string) string {

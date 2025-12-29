@@ -1,6 +1,7 @@
 package main
 
 import (
+	"adb-backup/internal/admin"
 	"adb-backup/internal/config"
 	"adb-backup/internal/database"
 	"adb-backup/internal/device"
@@ -20,6 +21,7 @@ func main() {
 		}
 	}
 	database.InitDB()
+	admin.InitAdmin()
 	go web.InitWeb()
 	device.StartWatch()
 }
