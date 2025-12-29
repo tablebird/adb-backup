@@ -10,6 +10,7 @@ var configs = []config{
 	&Adb,
 	&DB,
 	&Web,
+	&Ldap,
 }
 
 type config interface {

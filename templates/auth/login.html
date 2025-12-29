@@ -94,6 +94,9 @@
                 </label>
                 <select id="authSource" name="authSource" class="form-input" required>
                     <option value="0">本地认证</option>
+                    {{ range $index, $item := .AuthSources }}
+                        <option value="{{ $item.Int }}">{{ $item.String }}</option>
+                    {{ end }}
                 </select>
                 <div id="authSourceError" class="error-tip hidden"></div>
             </div>
@@ -131,7 +134,7 @@
                 const data = {
                     username: formData.get('username'),
                     password: formData.get('password'),
-                    auth_source: formData.get('authSource')
+                    auth_source: parseInt(formData.get('authSource'), 10)
                 };
 
                 // 提交登录请求

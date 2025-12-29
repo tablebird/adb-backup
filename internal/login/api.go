@@ -13,17 +13,19 @@ func Login() gin.HandlerFunc {
 		var req struct {
 			Username   string `json:"username"`
 			Password   string `json:"password"`
-			AuthSource string `json:"auth_source"`
+			AuthSource int    `json:"auth_source"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
-		user, err := database.FindUserByName(req.Username)
-		if err != nil || !user.CheckPassword(req.Password, user.Password) {
-			c.JSON(401, gin.H{"error": "认证失败"})
+
+		user, err := database.Authenticate(req.AuthSource, req.Username, req.Password)
+		if err != nil {
+			c.JSON(401, gin.H{"error": err.Error()})
 			return
 		}
+
 		token := generateToken()
 		tokenMap[token] = user.Id
 		c.SetCookie("login_token",
