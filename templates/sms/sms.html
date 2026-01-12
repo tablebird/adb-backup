@@ -130,7 +130,7 @@
                         ></textarea>
                     {{ range $index, $item := .NetworkTypes }}
                     {{if ne (toUpper $item) "UNKNOWN" }}
-                        <button class="p-2 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors" onclick="sendMessage({{$index}})">
+                        <button id="send-btn-{{$index}}" class="send-btn p-2 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors" onclick="sendMessage({{$index}})">
                             <i class="fa fa-paper-plane"> 卡{{add $index 1}}</i>
                         </button>
                         {{ end }}
@@ -689,7 +689,15 @@
             if (message === '') {
                 return;
             }
-            messageInput.value = '';
+            messageInput.disabled = true
+            const allSendButtons = document.querySelectorAll('.send-btn');
+            allSendButtons.forEach(button => {
+                button.disabled = true;
+                if (button.id === `send-btn-${subId}`) {
+                    button.dataset.originalHtml = button.innerHTML;
+                    button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 发送中...';
+                }
+            });
             fetch('/api/sms/send', {
                 method: 'POST',
                 headers: {
@@ -702,14 +710,25 @@
                     sub_id: subId
                 })
             })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.code !== 200) {
-                        showToast(data.msg || '发送失败')
-                    } else {
-                        loadNewMessages()
+            .then(response => response.json())
+            .then(data => {
+                if (data.code !== 200) {
+                    showToast(data.msg || '发送失败')
+                } else {
+                    messageInput.value = '';
+                    loadNewMessages()
+                }
+            })
+            .finally(() => {
+                messageInput.disabled = false;
+                allSendButtons.forEach(button => {
+                    button.disabled = false;
+                    if (button.dataset.originalHtml) {
+                        button.innerHTML = button.dataset.originalHtml;
+                        delete button.dataset.originalHtml;
                     }
-                })
+                });
+            })
 
         }
     </script>
