@@ -11,6 +11,7 @@ var configs = []config{
 	&DB,
 	&Web,
 	&Ldap,
+	&Feature,
 }
 
 type config interface {

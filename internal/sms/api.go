@@ -1,6 +1,7 @@
 package sms
 
 import (
+	"adb-backup/internal/config"
 	"adb-backup/internal/device"
 	"adb-backup/internal/shell"
 	"net/http"
@@ -289,6 +290,15 @@ func SendMessage() gin.HandlerFunc {
 				"code": 400,
 				"msg":  "请求参数错误",
 				"data": err.Error(),
+			})
+			return
+		}
+
+		if !config.Feature.EnableSendSms {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code": 400,
+				"msg":  "功能未启用",
+				"data": nil,
 			})
 			return
 		}
