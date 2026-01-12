@@ -1,0 +1,19 @@
+{{ define "textarea/autoHeightScript" }}
+    (function() {
+        const element = document.getElementById("{{.}}");
+        if (element) {
+            const initHeight = () => {
+                element.style.height = 'auto';
+                const lineHeight = parseFloat(getComputedStyle(element).lineHeight);
+                const maxHeight = lineHeight * 4 + 16; // 16px = py-2 (8px*2)
+                element.style.maxHeight = `${maxHeight}px`;
+                element.style.height = `${Math.min(element.scrollHeight, maxHeight)}px`;
+            };
+    
+            element.addEventListener('input', initHeight);
+    
+            document.addEventListener('DOMContentLoaded', initHeight);
+        }
+
+    })();
+{{ end}}

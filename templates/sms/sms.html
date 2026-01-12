@@ -118,11 +118,36 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400">选择后将展示该会话的所有消息</p>
                 </div>
             </div>
+            <!-- 消息输入框 -->
+             {{ if .NetworkTypes }}
+            <div class="p-3 bg-white dark:bg-card border-t border-gray-200 dark:border-gray-700">
+                <div class="flex items-center space-x-2">
+                    <textarea
+                        id="messageInput"
+                        placeholder="输入消息内容..."
+                        class="flex-1 px-4 py-2 bg-gray-100 dark:bg-cardSecondary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none overflow-y-auto leading-normal"
+                        rows="1"
+                        ></textarea>
+                    {{ range $index, $item := .NetworkTypes }}
+                    {{if ne (toUpper $item) "UNKNOWN" }}
+                        <button class="p-2 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors" onclick="sendMessage({{$index}})">
+                            <i class="fa fa-paper-plane"> 卡{{add $index 1}}</i>
+                        </button>
+                        {{ end }}
+                    {{ end }}
+                    </div>
+                </div>
+            </div>
+             {{ end }}
         </div>
     </main>
+    {{ template "toast/div" . }}
 
     <!-- JavaScript -->
     <script>
+
+        {{ template "toast/script" . }}
+
         // 全局变量
         const deviceId = "{{ .DeviceID }}";
         let activeThreadId = 0;
@@ -143,6 +168,8 @@
         {{ template "themeToggle/script" . }}
 
         {{ template "logout/script" }}
+
+        {{ template "textarea/autoHeightScript" "messageInput" }}
 
         // 1. 页面初始化
         window.onload = function() {
@@ -611,6 +638,34 @@
             addressKeyword = encodeURIComponent(searchText);
             conversationPage = 1;
             loadConversations(true)
+        }
+
+        function sendMessage(subId) {
+            const messageInput = document.getElementById('messageInput')
+            const message = messageInput.value.trim();
+            if (message === '') {
+                return;
+            }
+            messageInput.value = '';
+            fetch('/api/sms/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    device_id: deviceId,
+                    address: currentConversation.address,
+                    body: message,
+                    sub_id: subId
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code !== 200) {
+                        showToast(data.msg || '发送失败')
+                    }
+                })
+
         }
     </script>
 </body>

@@ -32,6 +32,10 @@ func GetConnectDevices() map[string]*adb.Device {
 	return connectDevices
 }
 
+func GetDevice(serials string) *adb.Device {
+	return connectDevices[serials]
+}
+
 func StartWatch() {
 
 	initClient()

@@ -1,10 +1,14 @@
 package sms
 
 import (
+	"adb-backup/internal/device"
+	"adb-backup/internal/shell"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	adb "github.com/zach-klippenstein/goadb"
 )
 
 type ConversationPageResult struct {
@@ -17,6 +21,13 @@ type ConversationPageResult struct {
 type MessageResult struct {
 	Messages []Message `json:"messages"` // 最新消息列表（已反转，最新在最后）
 	HasMore  bool      `json:"has_more"` // 是否有更多老消息
+}
+
+type MessageSendReq struct {
+	DeviceId string `json:"device_id" binding:"required"`
+	Address  string `json:"address" binding:"required"`
+	Body     string `json:"body" binding:"required"`
+	SubId    int    `json:"sub_id" binding:"oneof=0 1"`
 }
 
 func GetConversationsApiHandler() gin.HandlerFunc {
@@ -235,5 +246,84 @@ func GetOldMessagesApiHandler() gin.HandlerFunc {
 			"msg":  "获取成功",
 			"data": result,
 		})
+	}
+}
+
+func SendMessage() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req MessageSendReq
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code": 400,
+				"msg":  "请求参数错误",
+				"data": err.Error(),
+			})
+			return
+		}
+
+		device := device.GetDevice(req.DeviceId)
+		if device == nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code": 400,
+				"msg":  "设备不存在",
+				"data": nil,
+			})
+			return
+		}
+
+		state, er := device.State()
+		if er != nil || state != adb.StateOnline {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"code": 500,
+				"msg":  "设备状态异常",
+				"data": nil,
+			})
+			return
+		}
+		networkTypes, networkTypeErr := shell.GetPropGsmNetworkType(device)
+		if networkTypeErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"code": 500,
+				"msg":  "系统内部错误",
+				"data": nil,
+			})
+			return
+		}
+
+		if req.SubId >= len(networkTypes) {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"code": 500,
+				"msg":  "无效的SIM卡",
+				"data": nil,
+			})
+			return
+		}
+
+		networkType := networkTypes[req.SubId]
+
+		if len(networkType) == 0 || strings.ToUpper(networkType) == "UNKNOWN" {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"code": 500,
+				"msg":  "Sim卡不可用",
+				"data": nil,
+			})
+			return
+		}
+
+		res, sendErr := shell.ServiceCallIsmsSendMessage(device, req.SubId, req.Address, req.Body)
+		if sendErr != nil || !res {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"code": 500,
+				"msg":  "发送失败",
+				"data": nil,
+			})
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"code": 200,
+			"msg":  "发送成功",
+			"data": nil,
+		})
+
 	}
 }

@@ -19,9 +19,39 @@
                 },
                 fontFamily: {
                     inter: ['Inter', 'system-ui', 'sans-serif'],
-                },
+                }
             }
-        }
+        },
+        plugins: [
+            function ({ addBase, theme }) {
+            addBase({
+                '::-webkit-scrollbar': {
+                    width: '8px',
+                    height: '8px',
+                },
+                '::-webkit-scrollbar-button': {
+                    display: 'none',
+                },
+                '::-webkit-scrollbar-corner': {
+                    background: 'transparent',
+                },
+                '::-webkit-scrollbar-track': {
+                    backgroundColor: "transparent",
+                },
+                '::-webkit-scrollbar-thumb': {
+                    backgroundColor: theme('colors.gray.300'),
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s ease',
+                },
+                '::-webkit-scrollbar-thumb:hover': {
+                    backgroundColor: theme('colors.primary/80'),
+                },
+                '::-webkit-scrollbar-corner': {
+                    backgroundColor: theme('colors.gray.100'),
+                },
+            });
+            },
+        ],
     }
 </script>
 {{ end }}
