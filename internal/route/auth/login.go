@@ -21,6 +21,7 @@ func LoginPage() gin.HandlerFunc {
 		}
 		log.DebugF("AuthSource %v", keys)
 		h["AuthSources"] = keys
+		appendUser(h)
 
 		c.HTML(http.StatusOK, "login", h)
 	}

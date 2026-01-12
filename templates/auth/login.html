@@ -74,7 +74,7 @@
                 <label class="form-label" for="username">
                     <i class="fa fa-user mr-1 text-gray-500 dark:text-gray-400"></i> 用户名
                 </label>
-                <input type="text" id="username" name="username" class="form-input" placeholder="请输入用户名" autofocus required>
+                <input type="text" id="username" name="username" class="form-input" placeholder="请输入用户名" value="{{.User}}" autofocus required>
                 <div id="usernameError" class="error-tip hidden"></div>
             </div>
 
@@ -83,7 +83,7 @@
                 <label class="form-label" for="password">
                     <i class="fa fa-lock mr-1 text-gray-500 dark:text-gray-400"></i> 密码
                 </label>
-                <input type="password" id="password" name="password" class="form-input" placeholder="请输入密码" required>
+                <input type="password" id="password" name="password" class="form-input" placeholder="请输入密码" value="{{.Password}}" required>
                 <div id="passwordError" class="error-tip hidden"></div>
             </div>
 
