@@ -150,7 +150,7 @@
 
         // 全局变量
         const deviceId = "{{ .DeviceID }}";
-        let activeThreadId = 0;
+        let activeThreadId = '';
         const conversationPageSize = 20; // 会话每页加载20条
         let conversationPage = 1;       // 当前会话页码
         let hasMoreConversations = true; // 是否还有更多会话
@@ -162,6 +162,7 @@
         let messageLoading = false;     // 消息加载锁
         let currentConversation = null; // 当前选中的会话信息
         let addressKeyword = ''; // 会话地址搜索关键词
+        let messageLastDate = ''
         // 新增：判断是否为移动端（屏幕宽度 < 768px，对应Tailwind的md断点）
         let isMobile = window.innerWidth < 768;
 
@@ -246,7 +247,7 @@
         function handleMessageScroll(e) {
             const list = e.target;
             // 判断是否滚动到顶部（scrollTop <= 10）
-            if (list.scrollTop <= 10 && hasMoreMessages && !messageLoading && activeThreadId !== 0) {
+            if (list.scrollTop <= 10 && hasMoreMessages && !messageLoading && activeThreadId !== '') {
                 loadMoreOldMessages(); // 加载更多老消息
             }
         }
@@ -339,6 +340,27 @@
                 });
         }
 
+        function buildConversationHtml(conversation) {
+            return `
+                    <div id="conversation-item-${conversation.thread_id}" class="conversation-item ${conversation.thread_id === activeThreadId ? 'conversation-active' : ''}" 
+                         data-thread-id="${conversation.thread_id}"
+                         data-address="${conversation.address}">
+                        <div class="flex items-start space-x-2 flex-1 max-w-[calc(100%-80px)]">
+                            <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                                <i class="fa fa-phone text-xs text-primary"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="text-sm font-medium text-ellipsis-1">${conversation.address}</h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 text-ellipsis-1">${conversation.last_message}</p>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-400 flex flex-col items-end w-20 flex-shrink-0">
+                            <span class="text-ellipsis-1">${conversation.last_time}</span>
+                        </div>
+                    </div>
+                `;
+        }
+
         // 5. 渲染会话列表（首次加载）
         function renderConversationList(conversations) {
             const conversationList = document.getElementById('conversationList');
@@ -355,24 +377,7 @@
 
             let html = '';
             conversations.forEach(conversation => {
-                html += `
-                    <div class="conversation-item ${conversation.thread_id === activeThreadId ? 'conversation-active' : ''}" 
-                         data-thread-id="${conversation.thread_id}"
-                         data-address="${conversation.address}">
-                        <div class="flex items-start space-x-2 flex-1 max-w-[calc(100%-80px)]">
-                            <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                                <i class="fa fa-phone text-xs text-primary"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <h3 class="text-sm font-medium text-ellipsis-1">${conversation.address}</h3>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 text-ellipsis-1">${conversation.last_message}</p>
-                            </div>
-                        </div>
-                        <div class="text-xs text-gray-400 flex flex-col items-end w-20 flex-shrink-0">
-                            <span class="text-ellipsis-1">${conversation.last_time}</span>
-                        </div>
-                    </div>
-                `;
+                html += buildConversationHtml(conversation);
             });
             conversationList.innerHTML = html;
 
@@ -380,7 +385,7 @@
             conversationList.addEventListener('click', function(e) {
                 const conversationItem = e.target.closest('.conversation-item');
                 if (!conversationItem) return;
-                const threadId = parseInt(conversationItem.getAttribute('data-thread-id'));
+                const threadId = conversationItem.getAttribute('data-thread-id');
                 const address = conversationItem.getAttribute('data-address');
                 // 更新当前会话
                 currentConversation = { threadId, address };
@@ -396,24 +401,7 @@
 
             let html = '';
             conversations.forEach(conversation => {
-                html += `
-                    <div class="conversation-item ${conversation.thread_id === activeThreadId ? 'conversation-active' : ''}" 
-                         data-thread-id="${conversation.thread_id}"
-                         data-address="${conversation.address}">
-                        <div class="flex items-start space-x-2 flex-1 max-w-[calc(100%-80px)]">
-                            <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                                <i class="fa fa-phone text-xs text-primary"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <h3 class="text-sm font-medium text-ellipsis-1">${conversation.address}</h3>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 text-ellipsis-1">${conversation.last_message}</p>
-                            </div>
-                        </div>
-                        <div class="text-xs text-gray-400 flex flex-col items-end w-20 flex-shrink-0">
-                            <span class="text-ellipsis-1">${conversation.last_time}</span>
-                        </div>
-                    </div>
-                `;
+                html += buildConversationHtml(conversation)
             });
 
             // 插入到底部
@@ -465,7 +453,7 @@
 
         // 8. 加载当前会话的最新20条消息
         function loadLatestMessages() {
-            if (messageLoading || activeThreadId === 0) return;
+            if (messageLoading || activeThreadId === '') return;
             messageLoading = true;
 
             const messageContainer = document.getElementById('messageContainer');
@@ -502,9 +490,7 @@
                     // 渲染消息
                     renderMessageList(messages);
                     // 滚动到消息底部
-                    requestAnimationFrame(() => {
-                        messageContainer.scrollTop = messageContainer.scrollHeight;
-                    });
+                    scrollToTop(messageContainer)
                     messageLoading = false;
                 })
                 .catch(error => {
@@ -523,7 +509,7 @@
 
         // 9. 加载更多老消息
         function loadMoreOldMessages() {
-            if (messageLoading || !hasMoreMessages || activeThreadId === 0) return;
+            if (messageLoading || !hasMoreMessages || activeThreadId === '') return;
             messageLoading = true;
             messageOffset += messagePageSize;
 
@@ -583,6 +569,60 @@
                 });
         }
 
+        function scrollToTop(div) {
+            requestAnimationFrame(() => {
+                div.scrollTop = div.scrollHeight;
+            });
+        }
+
+        function loadNewMessages() { 
+            fetch(`/api/sms/messages/new?device_id=${deviceId}&thread_id=${activeThreadId}&last_date=${encodeURIComponent(messageLastDate)}`)
+                .then(response => {
+                        if (!response.ok) {
+                            throw new Error('获取消息失败');
+                        }
+                        return response.json();
+                    })
+                .then(data => { 
+                    if (data.code !== 200) {
+                        return;
+                    }
+                    if (data.data && data.data.length > 0) {
+                        const messageContainer = document.getElementById('messageContainer');
+                        let html = '';
+                        let lastMsg = null;
+                        data.data.forEach(message => {
+                            html += buildMessageDiv(message);
+                            messageLastDate = message.date;
+                            lastMsg = message;
+                        });
+                        const isBottom = messageContainer.scrollHeight - messageContainer.scrollTop - messageContainer.clientHeight < 10;
+                        messageContainer.insertAdjacentHTML('beforeend', html)
+                        if (isBottom) {
+                            scrollToTop(messageContainer)
+                        }
+                        refreshActiveConversationList(lastMsg)
+                    }
+                })
+                .catch(error => { 
+                });
+        }
+
+        function refreshActiveConversationList(message) {
+            const active = document.getElementById(`conversation-item-${message.thread_id}`)
+            active.remove()
+            const conversationList = document.getElementById('conversationList');
+            conversationList.insertAdjacentHTML('afterbegin', buildConversationHtml({
+                thread_id: message.thread_id,
+                address: message.address,
+                last_message: message.body,
+                last_time: message.date_format
+            }));
+            requestAnimationFrame(() => {
+                conversationList.scrollTop = 0;
+            });
+        }
+
         function buildMessageDiv(message) { 
             if (message.sms_type === '1') {
                 return `
@@ -613,6 +653,7 @@
             let html = '';
             messages.forEach(message => {
                 html += buildMessageDiv(message);
+                messageLastDate = message.date
             });
             messageContainer.innerHTML = html;
         }
@@ -665,6 +706,8 @@
                 .then(data => {
                     if (data.code !== 200) {
                         showToast(data.msg || '发送失败')
+                    } else {
+                        loadNewMessages()
                     }
                 })
 

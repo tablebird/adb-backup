@@ -57,6 +57,7 @@ func InitWeb() {
 	group.GET("/api/sms/conversations", smsApi.GetConversationsApiHandler())
 	group.GET("/api/sms/messages/latest", smsApi.GetLatestMessagesApiHandler())
 	group.GET("/api/sms/messages/old", smsApi.GetOldMessagesApiHandler())
+	group.GET("/api/sms/messages/new", smsApi.GetNewMessageApiHandler())
 	group.POST("/api/sms/send", smsApi.SendMessage())
 
 	port := config.Web.WebPort

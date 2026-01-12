@@ -5,9 +5,10 @@ import (
 	"adb-backup/internal/database"
 	"adb-backup/internal/log"
 	"adb-backup/internal/notify"
+	"adb-backup/internal/shell"
 	"adb-backup/internal/utils"
 
-	"adb-backup/internal/shell"
+	sy "sync"
 
 	"fmt"
 	"time"
@@ -28,9 +29,11 @@ type SmsSync struct {
 	smsLastDate time.Time
 
 	contentQuery shell.ContentQuery
+
+	syncMutex sy.RWMutex
 }
 
-func (s *SmsSync) SyncSms() error {
+func (s *SmsSync) StartSync() error {
 	serial := s.DbDevice.Serial
 	deviceId := s.DbDevice.Id
 	contentQuery := shell.ContentQuery{
@@ -44,40 +47,55 @@ func (s *SmsSync) SyncSms() error {
 	log.DebugF("[%s]历史最新消息时间为：%s", serial, s.smsLastDate)
 
 	for {
-		if !s.smsLastDate.IsZero() {
-			contentQuery.Where = fmt.Sprintf("date>%d", s.smsLastDate.UnixMilli())
-		}
-		result, err := contentQuery.QueryRow(s.Device)
+		length, err := s.SyncSms()
 		if err != nil {
-			return fmt.Errorf("读取短信错误： %w", err)
+			return err
 		}
-		var messages []database.Sms
-		for _, item := range result {
-			var sms database.Sms
-			utils.MapDecode(shell.ContentQueryParseItem(item), &sms)
-			sms.Uid = uuid.New().String()
-			sms.DeviceId = deviceId
-			sms.OrgStr = utils.CleanString(item)
-			if sms.Date.Sub(s.smsLastDate) > 0 {
-				s.smsLastDate = sms.Date
-			}
-			if s.NewNotify != nil && sms.Date.Sub(s.startSyncDate) > 0 {
-				s.NewNotify.NotifySms(sms)
-			}
-			messages = append(messages, sms)
-		}
-
-		length := len(messages)
 		if length <= 0 {
 			wait := config.App.ReadInterval
 			log.DebugF("[%s]没有找到新短信 暂停%s 最后一条消息的时间为: %s", serial, wait, s.smsLastDate)
 			time.Sleep(wait)
-		} else {
-			err := database.CreateInBatches(messages)
-			if err != nil {
-				log.WarningF("[%s]保存短信错误： %s", serial, err)
-			}
-			log.DebugF("[%s]读取到短信数量： %d 最后一条消息的时间为: %s", serial, length, s.smsLastDate)
 		}
 	}
+}
+
+func (s *SmsSync) SyncSms() (int, error) {
+	s.syncMutex.Lock()
+	serial := s.DbDevice.Serial
+	if !s.smsLastDate.IsZero() {
+		s.contentQuery.Where = fmt.Sprintf("date>%d", s.smsLastDate.UnixMilli())
+	}
+	result, err := s.contentQuery.QueryRow(s.Device)
+	if err != nil {
+		s.syncMutex.Unlock()
+		return 0, fmt.Errorf("读取短信错误： %w", err)
+	}
+	var messages []database.Sms
+	var smsLastDate time.Time
+	for _, item := range result {
+		var sms database.Sms
+		utils.MapDecode(shell.ContentQueryParseItem(item), &sms)
+		sms.Uid = uuid.New().String()
+		sms.DeviceId = s.DbDevice.Id
+		sms.OrgStr = utils.CleanString(item)
+		if sms.Date.Sub(s.smsLastDate) > 0 {
+			smsLastDate = sms.Date
+		}
+		if s.NewNotify != nil && sms.Date.Sub(s.startSyncDate) > 0 {
+			s.NewNotify.NotifySms(sms)
+		}
+		messages = append(messages, sms)
+	}
+	length := len(messages)
+	if length > 0 {
+		err := database.CreateInBatches(messages)
+		if err != nil {
+			log.WarningF("[%s]保存短信错误： %s", serial, err)
+		} else {
+			s.smsLastDate = smsLastDate
+		}
+		log.DebugF("[%s]读取到短信数量： %d 最后一条消息的时间为: %s", serial, length, s.smsLastDate)
+	}
+	s.syncMutex.Unlock()
+	return length, nil
 }

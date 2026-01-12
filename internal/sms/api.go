@@ -173,6 +173,38 @@ func GetLatestMessagesApiHandler() gin.HandlerFunc {
 	}
 }
 
+func GetNewMessageApiHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		r := c.Request
+		// 1. 获取URL参数
+		deviceId := r.URL.Query().Get("device_id")
+		threadId := r.URL.Query().Get("thread_id")
+		lastDate := r.URL.Query().Get("last_date")
+		if deviceId == "" || threadId == "" || lastDate == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code": 400,
+				"msg":  "参数错误",
+				"data": nil,
+			})
+			return
+		}
+		message, err := getNewMessage(deviceId, threadId, lastDate)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"code": 500,
+				"msg":  "获取消息失败：" + err.Error(),
+				"data": nil,
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"code": 200,
+			"msg":  "获取成功",
+			"data": message,
+		})
+	}
+}
+
 // 获取老消息
 func GetOldMessagesApiHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -261,8 +293,8 @@ func SendMessage() gin.HandlerFunc {
 			return
 		}
 
-		device := device.GetDevice(req.DeviceId)
-		if device == nil {
+		dev := device.GetDevice(req.DeviceId)
+		if dev == nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"code": 400,
 				"msg":  "设备不存在",
@@ -271,7 +303,7 @@ func SendMessage() gin.HandlerFunc {
 			return
 		}
 
-		state, er := device.State()
+		state, er := dev.State()
 		if er != nil || state != adb.StateOnline {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"code": 500,
@@ -280,7 +312,7 @@ func SendMessage() gin.HandlerFunc {
 			})
 			return
 		}
-		networkTypes, networkTypeErr := shell.GetPropGsmNetworkType(device)
+		networkTypes, networkTypeErr := shell.GetPropGsmNetworkType(dev)
 		if networkTypeErr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"code": 500,
@@ -310,13 +342,18 @@ func SendMessage() gin.HandlerFunc {
 			return
 		}
 
-		res, sendErr := shell.ServiceCallIsmsSendMessage(device, req.SubId, req.Address, req.Body)
+		res, sendErr := shell.ServiceCallIsmsSendMessage(dev, req.SubId, req.Address, req.Body)
 		if sendErr != nil || !res {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"code": 500,
 				"msg":  "发送失败",
 				"data": nil,
 			})
+		}
+
+		sync := device.GetSmsSync(req.DeviceId)
+		if sync != nil {
+			sync.SyncSms()
 		}
 
 		c.JSON(http.StatusOK, gin.H{

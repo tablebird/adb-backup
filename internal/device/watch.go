@@ -17,14 +17,14 @@ import (
 var (
 	client *adb.Adb
 	// 设备同步列表
-	syncing = make(map[string]sy.SmsSync)
+	syncing = make(map[string]*sy.SmsSync)
 
 	connectDevices = make(map[string]*adb.Device)
 
 	devicesMutex = sync.RWMutex{}
 )
 
-func GetSyncing() map[string]sy.SmsSync {
+func GetSyncing() map[string]*sy.SmsSync {
 	return syncing
 }
 
@@ -34,6 +34,10 @@ func GetConnectDevices() map[string]*adb.Device {
 
 func GetDevice(serials string) *adb.Device {
 	return connectDevices[serials]
+}
+
+func GetSmsSync(serials string) *sy.SmsSync {
+	return syncing[serials]
 }
 
 func StartWatch() {
@@ -145,7 +149,7 @@ func handleDevice(deviceInfo *adb.DeviceInfo, dbDevices []database.Device) {
 		NewNotify: notify.Notify,
 		Device:    adbDevice,
 	}
-	syncing[serial] = smsSync
+	syncing[serial] = &smsSync
 	devicesMutex.Unlock()
 
 	// 启动异步同步任务
@@ -157,7 +161,7 @@ func handleDevice(deviceInfo *adb.DeviceInfo, dbDevices []database.Device) {
 			devicesMutex.Unlock()
 		}()
 		// 执行同步，如果失败则提前返回
-		if err := smsSync.SyncSms(); err != nil {
+		if err := smsSync.StartSync(); err != nil {
 			log.ErrorF("设备 %s 同步失败: %v", device.Serial, err)
 			return
 		}

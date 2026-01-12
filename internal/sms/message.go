@@ -79,6 +79,41 @@ func getLatestMessages(deviceId string, threadId string, limit int) ([]Message, 
 	return messages, nil
 }
 
+func getNewMessage(deviceId string, threadId string, lastDate string) ([]Message, error) {
+	db := database.GetDB()
+
+	query := `
+		SELECT 
+			thread_id, address, date, sms_type, body, sub_id
+		FROM 
+			sms
+		WHERE 
+			device_id = ? AND thread_id = ? and date > ?
+		ORDER BY 
+			date;
+	`
+
+	rows, err := db.Raw(query, deviceId, threadId, lastDate).Rows()
+	if err != nil {
+		log.ErrorF("查询消息列表失败：%v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages []Message
+	for rows.Next() {
+		var m Message
+		err := rows.Scan(&m.ThreadId, &m.Address, &m.Date, &m.SmsType, &m.Body, &m.SubId)
+		if err != nil {
+			log.ErrorF("扫描消息行失败：%v", err)
+			return nil, err
+		}
+		m.initFormat()
+		messages = append(messages, m)
+	}
+	return messages, nil
+}
+
 // 查询老消息
 func getOldMessages(deviceId string, threadId string, offset, pageSize int) ([]Message, error) {
 	db := database.GetDB()
