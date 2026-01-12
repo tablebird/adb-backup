@@ -39,6 +39,26 @@
             .load-tip {
                 @apply py-2 text-xs text-gray-400 text-center;
             }
+            .sim-card-bg-l {
+                clip-path: polygon(
+                    25% 0,
+                    100% 0,
+                    100% 100%,
+                    0 100%,
+                    0 25%
+                );
+                border-radius: 0 10% 10% 10%;
+            }
+            .sim-card-bg-r {
+                clip-path: polygon(
+                    0 0,
+                    calc(100% - 25%) 0,
+                    100% 25%,
+                    100% 100%,
+                    0 100%
+                );
+                border-radius: 10% 0 10% 10%;
+            }
         }
     </style>
 </head>
@@ -254,7 +274,7 @@
                         if (newConversations && newConversations.length > 0 && !isMobile) {
                             const firstItem = conversationList.querySelector('.conversation-item');
                             currentConversation = newConversations[0];
-                            switchConversation(newConversations[0].thread_id, newConversations[0].address, newConversations[0].sub_id === 1 ? 'SIM1' : 'SIM2', firstItem);
+                            switchConversation(newConversations[0].thread_id, newConversations[0].address, firstItem);
                         }
                     } else {
                         // 非首次加载：插入到列表顶部
@@ -311,8 +331,7 @@
                 html += `
                     <div class="conversation-item ${conversation.thread_id === activeThreadId ? 'conversation-active' : ''}" 
                          data-thread-id="${conversation.thread_id}"
-                         data-address="${conversation.address}"
-                         data-sim="${conversation.sub_id === 0 ? 'SIM1' : 'SIM2'}">
+                         data-address="${conversation.address}">
                         <div class="flex items-start space-x-2 flex-1 max-w-[calc(100%-80px)]">
                             <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                                 <i class="fa fa-phone text-xs text-primary"></i>
@@ -324,7 +343,6 @@
                         </div>
                         <div class="text-xs text-gray-400 flex flex-col items-end w-20 flex-shrink-0">
                             <span class="text-ellipsis-1">${conversation.last_time}</span>
-                            <span class="text-xs bg-primary/10 text-primary px-1 rounded mt-1">${conversation.sub_id === 0 ? 'SIM1' : 'SIM2'}</span>
                         </div>
                     </div>
                 `;
@@ -337,10 +355,9 @@
                 if (!conversationItem) return;
                 const threadId = parseInt(conversationItem.getAttribute('data-thread-id'));
                 const address = conversationItem.getAttribute('data-address');
-                const sim = conversationItem.getAttribute('data-sim');
                 // 更新当前会话
-                currentConversation = { threadId, address, sim };
-                switchConversation(threadId, address, sim, conversationItem);
+                currentConversation = { threadId, address };
+                switchConversation(threadId, address, conversationItem);
             });
         }
 
@@ -355,8 +372,7 @@
                 html += `
                     <div class="conversation-item ${conversation.thread_id === activeThreadId ? 'conversation-active' : ''}" 
                          data-thread-id="${conversation.thread_id}"
-                         data-address="${conversation.address}"
-                         data-sim="${conversation.sub_id === 0 ? 'SIM1' : 'SIM2'}">
+                         data-address="${conversation.address}">
                         <div class="flex items-start space-x-2 flex-1 max-w-[calc(100%-80px)]">
                             <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                                 <i class="fa fa-phone text-xs text-primary"></i>
@@ -368,7 +384,6 @@
                         </div>
                         <div class="text-xs text-gray-400 flex flex-col items-end w-20 flex-shrink-0">
                             <span class="text-ellipsis-1">${conversation.last_time}</span>
-                            <span class="text-xs bg-primary/10 text-primary px-1 rounded mt-1">${conversation.sub_id === 0 ? 'SIM1' : 'SIM2'}</span>
                         </div>
                     </div>
                 `;
@@ -379,7 +394,7 @@
         }
 
         // 7. 切换会话
-        function switchConversation(threadId, address, sim, conversationItem) {
+        function switchConversation(threadId, address, conversationItem) {
             // 移除所有会话的活跃状态
             document.querySelectorAll('.conversation-item').forEach(item => {
                 item.classList.remove('conversation-active');
@@ -393,7 +408,6 @@
             const conversationHeader = document.getElementById('conversationHeader');
             conversationHeader.innerHTML = `
                 <h2 class="text-sm font-bold">${address}</h2>
-                <span class="ml-2 text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">${sim}</span>
             `;
             
             // 重置消息加载参数
@@ -540,32 +554,36 @@
                 });
         }
 
-        // 10. 渲染最新消息列表
-        function renderMessageList(messages) {
-            const messageContainer = document.getElementById('messageContainer');
-            let html = '';
-            messages.forEach(message => {
-                if (message.sms_type === '1') {
-                    // 接收消息 - 左侧
-                    html += `
-                        <div class="flex items-start justify-start" data-msg-id="${message.thread_id}-${message.date}">
+        function buildMessageDiv(message) { 
+            if (message.sms_type === '1') {
+                return `
+                        <div class="flex items-end justify-start" data-msg-id="${message.thread_id}-${message.date}">
                             <div class="message-bubble bg-receive dark:bg-card text-gray-800 dark:text-gray-200">
                                 <p class="whitespace-pre-wrap">${message.body}</p>
                                 <p class="text-right text-xs text-gray-400 mt-1">${message.date_format}</p>
                             </div>
+                            ${message.sub_format && message.sub_format != ''  ? `<span class="ml-2 text-[8px] sim-card-bg-r bg-gray-200 dark:bg-gray-700 p-1 ml-1">${message.sub_format}</span>` : ''}
                         </div>
                     `;
-                } else {
-                    // 发送消息 - 右侧
-                    html += `
-                        <div class="flex items-start justify-end" data-msg-id="${message.thread_id}-${message.date}">
+            } else {
+                return `
+                        <div class="flex items-end justify-end" data-msg-id="${message.thread_id}-${message.date}">
+                            ${message.sub_format && message.sub_format != '' ? `<span class="ml-2 text-[8px] sim-card-bg-r bg-gray-200 dark:bg-gray-700 p-1 mr-1">${message.sub_format}</span>` : ''}
                             <div class="message-bubble bg-send dark:bg-primary/20 text-gray-800 dark:text-gray-200">
                                 <p class="whitespace-pre-wrap">${message.body}</p>
                                 <p class="text-right text-xs text-gray-400 mt-1">${message.date_format}</p>
                             </div>
                         </div>
                     `;
-                }
+            }
+        }
+
+        // 10. 渲染最新消息列表
+        function renderMessageList(messages) {
+            const messageContainer = document.getElementById('messageContainer');
+            let html = '';
+            messages.forEach(message => {
+                html += buildMessageDiv(message);
             });
             messageContainer.innerHTML = html;
         }
@@ -577,25 +595,7 @@
 
             let html = '';
             oldMessages.forEach(message => {
-                if (message.sms_type === '1') {
-                    html += `
-                        <div class="flex items-start justify-start" data-msg-id="${message.thread_id}-${message.date}">
-                            <div class="message-bubble bg-receive dark:bg-card text-gray-800 dark:text-gray-200">
-                                <p>${message.body}</p>
-                                <p class="text-right text-xs text-gray-400 mt-1">${message.date_format}</p>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    html += `
-                        <div class="flex items-start justify-end" data-msg-id="${message.thread_id}-${message.date}">
-                            <div class="message-bubble bg-send dark:bg-primary/20 text-gray-800 dark:text-gray-200">
-                                <p>${message.body}</p>
-                                <p class="text-right text-xs text-gray-400 mt-1">${message.date_format}</p>
-                            </div>
-                        </div>
-                    `;
-                }
+                html += buildMessageDiv(message);
             });
 
             // 插入到顶部

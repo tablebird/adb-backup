@@ -3,6 +3,7 @@ package sms
 import (
 	"adb-backup/internal/database"
 	"adb-backup/internal/log"
+	"strconv"
 	"time"
 )
 
@@ -14,6 +15,14 @@ type Message struct {
 	SmsType    string    `json:"sms_type"`
 	Body       string    `json:"body"`
 	SubId      int       `json:"sub_id"`
+	SubFormat  string    `json:"sub_format"`
+}
+
+func (m *Message) initFormat() {
+	m.DateFormat = m.Date.Format("2006-01-02 15:04:05")
+	if m.SubId >= 0 {
+		m.SubFormat = strconv.Itoa(m.SubId + 1)
+	}
 }
 
 // 查询指定会话的消息总数
@@ -60,8 +69,7 @@ func getLatestMessages(deviceId string, threadId string, limit int) ([]Message, 
 			log.ErrorF("扫描消息行失败：%v", err)
 			return nil, err
 		}
-		// 格式化时间
-		m.DateFormat = m.Date.Format("2006-01-02 15:04:05")
+		m.initFormat()
 		messages = append(messages, m)
 	}
 	// 反转消息列表（让最新的消息在数组最后，对应页面底部）
@@ -100,7 +108,7 @@ func getOldMessages(deviceId string, threadId string, offset, pageSize int) ([]M
 		if err != nil {
 			return nil, err
 		}
-		m.DateFormat = m.Date.Format("2006-01-02 15:04:05")
+		m.initFormat()
 		messages = append(messages, m)
 	}
 
