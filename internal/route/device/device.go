@@ -24,7 +24,7 @@ type DeviceInfo struct {
 	WiFiSSID       string
 	Battery        int
 	Charging       bool
-	AndroidVersion string
+	AndroidVersion int
 }
 
 type SimInfo struct {
@@ -59,7 +59,7 @@ func DevicesInfo() gin.HandlerFunc {
 			var sims []SimInfo
 			wiFiConnected := false
 			var batteryLevel = 0
-			var androidVersion = ""
+			var androidVersion int
 			var wifiSSID = ""
 			var charging = false
 			adbDevice := connectDevices[serial]
@@ -117,7 +117,7 @@ func DevicesInfo() gin.HandlerFunc {
 					batteryLevel, _ = shell.DumpBatteryLevel(adbDevice)
 					poweredTypes, _ := shell.DumpBatteryPoweredType(adbDevice)
 					charging = len(poweredTypes) > 0
-					androidVersion, _ = shell.GetProp(adbDevice, "ro.build.version.release")
+					androidVersion, _ = shell.GetPropBuildVersionRelease(adbDevice)
 				}
 			} else {
 				OfflineCount++

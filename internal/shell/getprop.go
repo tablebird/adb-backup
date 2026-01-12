@@ -83,3 +83,7 @@ func GetPropTelephonySimSlotsCount(d *adb.Device) (int, error) {
 func GetPropTelephonyDefaultCdmaSub(d *adb.Device) (int, error) {
 	return GetPropInt(d, "ro.telephony.default_cdma_sub")
 }
+
+func GetPropBuildVersionRelease(d *adb.Device) (int, error) {
+	return GetPropInt(d, "ro.build.version.release")
+}
