@@ -502,7 +502,9 @@
                     // 渲染消息
                     renderMessageList(messages);
                     // 滚动到消息底部
-                    messageContainer.scrollTop = messageContainer.scrollHeight;
+                    requestAnimationFrame(() => {
+                        messageContainer.scrollTop = messageContainer.scrollHeight;
+                    });
                     messageLoading = false;
                 })
                 .catch(error => {
