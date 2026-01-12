@@ -10,7 +10,6 @@ type Conversation struct {
 	Address     string `json:"address"`
 	LastMessage string `json:"last_message"`
 	LastTime    string `json:"last_time"`
-	SubId       int    `json:"sub_id"`
 }
 
 // 查询设备的会话总数
@@ -36,8 +35,7 @@ func getConversations(deviceId string, offset int, pageSize int, address string)
 			thread_id, 
 			address, 
 			(SELECT body FROM sms WHERE thread_id = t.thread_id AND device_id = $1 ORDER BY date DESC LIMIT 1) as last_message,
-			(SELECT date FROM sms WHERE thread_id = t.thread_id AND device_id = $1 ORDER BY date DESC LIMIT 1) as last_date,
-			(SELECT sub_id FROM sms WHERE thread_id = t.thread_id AND device_id = $1 ORDER BY date DESC LIMIT 1) as sub_id
+			(SELECT date FROM sms WHERE thread_id = t.thread_id AND device_id = $1 ORDER BY date DESC LIMIT 1) as last_date
 		FROM 
 			sms t
 		WHERE 
@@ -60,7 +58,7 @@ func getConversations(deviceId string, offset int, pageSize int, address string)
 	for rows.Next() {
 		var c Conversation
 		var lastDate time.Time
-		err := rows.Scan(&c.ThreadId, &c.Address, &c.LastMessage, &lastDate, &c.SubId)
+		err := rows.Scan(&c.ThreadId, &c.Address, &c.LastMessage, &lastDate)
 		if err != nil {
 			return nil, err
 		}
