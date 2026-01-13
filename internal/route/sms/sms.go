@@ -6,6 +6,7 @@ import (
 	"adb-backup/internal/device"
 	"adb-backup/internal/shell"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,6 +32,14 @@ func SmsPage() gin.HandlerFunc {
 				networkTypes, err := shell.GetPropGsmNetworkType(adbDevice)
 				if err == nil {
 					h["NetworkTypes"] = networkTypes
+					var enableSendSms bool
+					for _, networkType := range networkTypes {
+						if networkType != "" && strings.ToUpper(networkType) != "UNKNOWN" {
+							enableSendSms = true
+							break
+						}
+					}
+					h["EnableSendSms"] = enableSendSms
 				}
 			}
 		}
