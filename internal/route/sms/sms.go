@@ -2,6 +2,7 @@ package sms
 
 import (
 	"adb-backup/internal/config"
+	"adb-backup/internal/database"
 	"adb-backup/internal/device"
 	"adb-backup/internal/shell"
 	"net/http"
@@ -20,10 +21,14 @@ func SmsPage() gin.HandlerFunc {
 		h := gin.H{
 			"DeviceID": deviceId,
 		}
+		dbDevice, err := database.FindDeviceById(deviceId)
+		if err == nil && dbDevice.Id != "" {
+			h["DeviceName"] = dbDevice.BuildName()
+		}
 		if config.Feature.EnableSendSms {
-			device := device.GetDevice(deviceId)
-			if device != nil {
-				networkTypes, err := shell.GetPropGsmNetworkType(device)
+			adbDevice := device.GetDevice(deviceId)
+			if adbDevice != nil {
+				networkTypes, err := shell.GetPropGsmNetworkType(adbDevice)
 				if err == nil {
 					h["NetworkTypes"] = networkTypes
 				}

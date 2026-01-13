@@ -5,6 +5,7 @@ import (
 	"adb-backup/internal/database"
 	"adb-backup/internal/log"
 	"adb-backup/internal/notify"
+	"adb-backup/internal/shell"
 	sy "adb-backup/internal/sync"
 	"slices"
 	"sync"
@@ -127,18 +128,38 @@ func handleDevice(deviceInfo *adb.DeviceInfo, dbDevices []database.Device) {
 	}
 	if !found {
 		// 创建新设备
+		manufacturer, _ := shell.GetPropProductManufacturer(adbDevice)
+		marketingName, _ := shell.GetMarketingName(adbDevice)
 		device = database.Device{
-			Id:      serial,
-			Serial:  serial,
-			Product: deviceInfo.Product,
-			Model:   deviceInfo.Model,
-			Info:    deviceInfo.DeviceInfo,
-			Usb:     deviceInfo.Usb,
+			Id:            serial,
+			Serial:        serial,
+			Product:       deviceInfo.Product,
+			Model:         deviceInfo.Model,
+			Info:          deviceInfo.DeviceInfo,
+			Usb:           deviceInfo.Usb,
+			Manufacturer:  manufacturer,
+			MarketingName: marketingName,
 		}
 		err = database.CreateDevice(&device)
 		if err != nil {
 			log.FatalF("创建设备 %s 记录错误： %v", serial, err)
 			return
+		}
+	} else {
+		var change = false
+		if device.Manufacturer == "" {
+			manufacturer, _ := shell.GetPropProductManufacturer(adbDevice)
+			device.Manufacturer = manufacturer
+			change = true
+		}
+		if device.MarketingName == "" {
+			change = true
+			marketingName, _ := shell.GetMarketingName(adbDevice)
+			device.MarketingName = marketingName
+		}
+		if change {
+			database.UpdateDevice(&device)
+			database.UpdateDevice(&device)
 		}
 	}
 

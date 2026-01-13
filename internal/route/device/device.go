@@ -15,7 +15,8 @@ import (
 )
 
 type DeviceInfo struct {
-	database.Device
+	Id             string
+	Name           string
 	Index          int
 	Status         string
 	Sync           bool
@@ -124,7 +125,8 @@ func DevicesInfo() gin.HandlerFunc {
 			}
 
 			devicesInfo = append(devicesInfo, DeviceInfo{
-				device,
+				device.Id,
+				device.BuildName(),
 				0,
 				stateStr,
 				sync,

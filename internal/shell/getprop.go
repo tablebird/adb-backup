@@ -87,3 +87,27 @@ func GetPropTelephonyDefaultCdmaSub(d *adb.Device) (int, error) {
 func GetPropBuildVersionRelease(d *adb.Device) (int, error) {
 	return GetPropInt(d, "ro.build.version.release")
 }
+
+func GetPropProductManufacturer(d *adb.Device) (string, error) {
+	return GetProp(d, "ro.product.manufacturer")
+}
+
+func GetPropProductModel(d *adb.Device) (string, error) {
+	return GetProp(d, "ro.product.model")
+}
+
+func GetPropProductBrand(d *adb.Device) (string, error) {
+	return GetProp(d, "ro.product.brand")
+}
+
+func GetPropConfigMarketingName(d *adb.Device) (string, error) {
+	return GetProp(d, "ro.config.marketing_name")
+}
+
+func GetPropKernelQemu(d *adb.Device) (string, error) {
+	return GetProp(d, "ro.kernel.qemu")
+}
+
+func GetPropBootQemuAvdName(d *adb.Device) (string, error) {
+	return GetProp(d, "ro.boot.qemu.avd_name")
+}
