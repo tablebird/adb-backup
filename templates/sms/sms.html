@@ -20,6 +20,9 @@
             .conversation-active {
                 @apply bg-primary/10 dark:bg-primary/20 border-primary font-medium;
             }
+            .conversation-item-create {
+                @apply cursor-default;
+            }
             .message-bubble {
                 @apply rounded-lg px-4 py-2 max-w-[70%] shadow-sm text-sm;
             }
@@ -379,7 +382,7 @@
         function createConversation() {
             const conversationList = document.getElementById('conversationList');
             const address = decodeURIComponent(addressKeyword)
-            conversationList.innerHTML = `<div id="conversation-item-create" class="conversation-item conversation-active"
+            conversationList.innerHTML = `<div id="conversation-item-create" class="conversation-item conversation-active conversation-item-create"
                         data-thread-id="create">
                         <div class="flex items-start space-x-2 flex-1 max-w-[calc(100%-80px)]">
                             <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
@@ -395,8 +398,16 @@
                                     autoFocus/>
                             </div>
                         </div>
+                        <div class="text-xs text-gray-400 flex flex-col items-end w-20 flex-shrink-0">
+                            <button id="cancelCreate" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onclick="cancelCreateConversation()">
+                                <i class="fa fa-times-circle" aria-hidden="true"></i>
+                            </button>
+                        </div>
                     </div>
                 `;
+            document.getElementById('searchInput').value = ''
+            addressKeyword = ''
+
             activeThreadId = "create"
             messageOffset = 0;
             hasMoreMessages = true;
@@ -428,6 +439,12 @@
             updateCurrentConversation(activeThreadId, address);
         }
 
+        function cancelCreateConversation() {
+            activeThreadId = ''
+            updateCurrentConversation(activeThreadId, '')
+            loadConversations(true)
+        }
+
         // 5. 渲染会话列表（首次加载）
         function renderConversationList(conversations) {
             const conversationList = document.getElementById('conversationList');
@@ -455,7 +472,7 @@
                 if (!conversationItem) return;
                 const threadId = conversationItem.getAttribute('data-thread-id');
                 const address = conversationItem.getAttribute('data-address');
-                if (activeThreadId == threadId) {
+                if (activeThreadId == threadId || threadId === 'create') {
                     return;
                 }
                 // 更新当前会话
@@ -771,6 +788,9 @@
             const searchText = document.getElementById('searchInput').value.trim().toLowerCase();
             addressKeyword = encodeURIComponent(searchText);
             conversationPage = 1;
+            if (activeThreadId === 'create') {
+                return;
+            }
             activeThreadId = ''
             loadConversations(true)
         }
