@@ -23,7 +23,7 @@ func SettingsGet(d *adb.Device, sys string) (string, error) {
 	return strings.TrimSpace(command), nil
 }
 
-func SettingGetBool(d *adb.Device, sys string) (bool, error) {
+func SettingsGetBool(d *adb.Device, sys string) (bool, error) {
 	command, err := SettingsGet(d, sys)
 	if err != nil {
 		return false, err
@@ -31,7 +31,7 @@ func SettingGetBool(d *adb.Device, sys string) (bool, error) {
 	return command == "1" || command == "true", nil
 }
 
-func SettingGetInt(d *adb.Device, sys string) (int, error) {
+func SettingsGetInt(d *adb.Device, sys string) (int, error) {
 	command, err := SettingsGet(d, sys)
 	if err != nil {
 		return 0, err
@@ -39,8 +39,8 @@ func SettingGetInt(d *adb.Device, sys string) (int, error) {
 	return strconv.Atoi(strings.TrimSpace(command))
 }
 
-func SettingGetWifiOn(d *adb.Device) (bool, error) {
-	return SettingGetBool(d, "global wifi_on")
+func SettingsGetWifiOn(d *adb.Device) (bool, error) {
+	return SettingsGetBool(d, "global wifi_on")
 }
 
 func SettingsGetAndroidId(d *adb.Device) (string, error) {

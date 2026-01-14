@@ -114,7 +114,7 @@ func DevicesInfo() gin.HandlerFunc {
 						deviceInfo.Sims = sims
 					}
 
-					wifi, _ := shell.SettingGetWifiOn(adbDevice)
+					wifi, _ := shell.SettingsGetWifiOn(adbDevice)
 					if wifi {
 						wifiSSID, err := shell.DumpWifiInfoSsid(adbDevice)
 						deviceInfo.WiFiSSID = wifiSSID
