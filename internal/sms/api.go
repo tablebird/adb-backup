@@ -4,6 +4,7 @@ import (
 	"adb-backup/internal/config"
 	"adb-backup/internal/database"
 	"adb-backup/internal/device"
+	"adb-backup/internal/log"
 	"adb-backup/internal/shell"
 	"net/http"
 	"strconv"
@@ -364,6 +365,7 @@ func SendMessage() gin.HandlerFunc {
 
 		res, sendErr := shell.ServiceCallIsmsSendMessage(dev, req.SubId, req.Address, req.Body)
 		if sendErr != nil || !res {
+			log.WarningF("sms Send Message Failed: %s", sendErr.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"code": 500,
 				"msg":  "发送失败",
@@ -374,12 +376,24 @@ func SendMessage() gin.HandlerFunc {
 
 		sync := device.GetSmsSync(dbDevice.Serial)
 		if sync != nil {
-			sync.SyncSms()
+			messages, err := sync.SyncSms()
+			if err == nil && messages != nil && len(messages) > 0 {
+				for _, message := range messages {
+					if message.Address == req.Address && message.Body == req.Body {
+						c.JSON(http.StatusOK, gin.H{
+							"code": 200,
+							"msg":  "发送成功",
+							"data": message.ThreadId,
+						})
+						return
+					}
+				}
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"code": 200,
-			"msg":  "发送成功",
+			"code": 500,
+			"msg":  "发送失败",
 			"data": nil,
 		})
 

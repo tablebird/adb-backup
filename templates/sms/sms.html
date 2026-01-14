@@ -257,7 +257,7 @@
         }
 
         // 4. 加载会话列表
-        function loadConversations(isFirstLoad) {
+        function loadConversations(isFirstLoad, threadId) {
             if (conversationLoading) return;
             conversationLoading = true;
 
@@ -303,10 +303,21 @@
                         // 首次加载：渲染完整列表
                         renderConversationList(newConversations);
                         // PC端默认选中第一个会话，移动端不默认选中
-                        if (newConversations && newConversations.length > 0 && !isMobile) {
-                            const firstItem = conversationList.querySelector('.conversation-item');
-                            currentConversation = newConversations[0];
-                            switchConversation(newConversations[0].thread_id, newConversations[0].address, firstItem);
+                        if (newConversations && newConversations.length > 0) {
+                            let conversation = undefined;
+                            if (threadId && threadId !== '') {
+                                newConversations.forEach(function (item) {
+                                    if (item.thread_id === threadId) {
+                                        conversation = item;
+                                    }
+                                });
+                            }
+                            if (!conversation && !isMobile) {
+                                conversation = newConversations[0];
+                            }
+                            if (conversation) {
+                                switchConversation(conversation.thread_id, conversation.address);
+                            }
                         }
                     } else {
                         // 非首次加载：插入到列表顶部
@@ -367,6 +378,7 @@
 
         function createConversation() {
             const conversationList = document.getElementById('conversationList');
+            const address = decodeURIComponent(addressKeyword)
             conversationList.innerHTML = `<div id="conversation-item-create" class="conversation-item conversation-active"
                         data-thread-id="create">
                         <div class="flex items-start space-x-2 flex-1 max-w-[calc(100%-80px)]">
@@ -378,15 +390,24 @@
                                     class="create-conversation-address-input w-full bg-transparent text-sm text-white placeholder-white/50 focus:outline-none"
                                     placeholder="请输入号码"
                                     onkeypress="handleCreateConversationKeyPress(event)"
-                                    value="${addressKeyword}"
+                                    oninput="handleCreateConversationInput(this.value)"
+                                    value="${address}"
                                     autoFocus/>
                             </div>
                         </div>
                     </div>
                 `;
-            const firstItem = conversationList.querySelector('.conversation-item');
-            switchConversation('create', '', firstItem)
+            activeThreadId = "create"
+            messageOffset = 0;
+            hasMoreMessages = true;
+
+            const messageContainer = document.getElementById('messageContainer');
+            messageContainer.innerHTML = ``;
+            
+            updateCurrentConversation(activeThreadId, address);
+
             const input = document.getElementById('create-conversation-address-input')
+            input.focus();
             input.setSelectionRange(input.value.length, input.value.length)
         }
 
@@ -397,11 +418,14 @@
                 if (address === '') {
                     return;
                 }
-                conversationItem.disabled = true;
-                currentConversation = { activeThreadId, address };
-                switchConversation(activeThreadId, address, conversationItem)
+                switchConversation(activeThreadId, address)
                 document.getElementById('messageInput').focus()
             }
+        }
+
+        function handleCreateConversationInput(address) {
+            address = address.trim();
+            updateCurrentConversation(activeThreadId, address);
         }
 
         // 5. 渲染会话列表（首次加载）
@@ -435,8 +459,7 @@
                     return;
                 }
                 // 更新当前会话
-                currentConversation = { threadId, address };
-                switchConversation(threadId, address, conversationItem);
+                switchConversation(threadId, address);
             });
         }
 
@@ -455,22 +478,33 @@
             conversationList.insertAdjacentHTML('beforeend', html);
         }
 
-        // 7. 切换会话
-        function switchConversation(threadId, address, conversationItem) {
-            // 移除所有会话的活跃状态
-            document.querySelectorAll('.conversation-item').forEach(item => {
-                item.classList.remove('conversation-active');
-            });
-            
-            if (conversationItem) {
-                conversationItem.classList.add('conversation-active');
-            }
-            
-            // 更新会话头部
+        function updateCurrentConversation(threadId, address) {
+            currentConversation = { threadId, address }
+            refreshConversationHeader(address)
+        }
+
+        function refreshConversationHeader(address) {
             const conversationHeader = document.getElementById('conversationHeader');
             conversationHeader.innerHTML = `
                 <h2 class="text-sm font-bold">${address}</h2>
             `;
+        }
+
+        // 7. 切换会话
+        function switchConversation(threadId, address) {
+            // 更新会话头部
+            updateCurrentConversation(threadId, address);
+
+            // 移除所有会话的活跃状态
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                const itemThreadId = item.getAttribute('data-thread-id')
+                if (threadId === itemThreadId) {
+                    item.classList.add('conversation-active');
+                } else {
+                    item.classList.remove('conversation-active');
+                }
+            });
+            
             
             // 重置消息加载参数
             activeThreadId = threadId;
@@ -737,6 +771,7 @@
             const searchText = document.getElementById('searchInput').value.trim().toLowerCase();
             addressKeyword = encodeURIComponent(searchText);
             conversationPage = 1;
+            activeThreadId = ''
             loadConversations(true)
         }
 
@@ -744,6 +779,10 @@
             const messageInput = document.getElementById('messageInput')
             const message = messageInput.value.trim();
             if (message === '') {
+                return;
+            }
+            if (!currentConversation.address || currentConversation.address.trim() === '') {
+                showToast("收件人不能为空")
                 return;
             }
             messageInput.disabled = true
@@ -776,7 +815,7 @@
                     if (activeThreadId === 'create') {
                         document.getElementById('searchInput').value = ''
                         addressKeyword = ''
-                        loadConversations(true)
+                        loadConversations(true, data.data)
                     } else {
                         loadNewMessages()
                     }

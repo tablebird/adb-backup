@@ -47,11 +47,11 @@ func (s *SmsSync) StartSync() error {
 	log.DebugF("[%s]历史最新消息时间为：%s", serial, s.smsLastDate)
 
 	for {
-		length, err := s.SyncSms()
+		messages, err := s.SyncSms()
 		if err != nil {
 			return err
 		}
-		if length <= 0 {
+		if len(messages) <= 0 {
 			wait := config.App.ReadInterval
 			log.DebugF("[%s]没有找到新短信 暂停%s 最后一条消息的时间为: %s", serial, wait, s.smsLastDate)
 			time.Sleep(wait)
@@ -59,7 +59,7 @@ func (s *SmsSync) StartSync() error {
 	}
 }
 
-func (s *SmsSync) SyncSms() (int, error) {
+func (s *SmsSync) SyncSms() ([]database.Sms, error) {
 	s.syncMutex.Lock()
 	serial := s.DbDevice.Serial
 	if !s.smsLastDate.IsZero() {
@@ -68,7 +68,7 @@ func (s *SmsSync) SyncSms() (int, error) {
 	result, err := s.contentQuery.QueryRow(s.Device)
 	if err != nil {
 		s.syncMutex.Unlock()
-		return 0, fmt.Errorf("读取短信错误： %w", err)
+		return nil, fmt.Errorf("读取短信错误： %w", err)
 	}
 	var messages []database.Sms
 	var smsLastDate time.Time
@@ -97,5 +97,5 @@ func (s *SmsSync) SyncSms() (int, error) {
 		log.DebugF("[%s]读取到短信数量： %d 最后一条消息的时间为: %s", serial, length, s.smsLastDate)
 	}
 	s.syncMutex.Unlock()
-	return length, nil
+	return messages, nil
 }
