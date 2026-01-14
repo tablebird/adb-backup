@@ -53,32 +53,35 @@ func DevicesInfo() gin.HandlerFunc {
 		var OfflineCount = 0
 		var devicesInfo []DeviceInfo
 		for _, device := range devices {
+			var deviceInfo = DeviceInfo{
+				Id:    device.Id,
+				Name:  device.BuildName(),
+				Index: 0,
+			}
+
 			serial := device.Serial
 			allDevices[serial] = true
-			var stateStr string
-			sync := false
-			var sims []SimInfo
 			wiFiConnected := false
-			var batteryLevel = 0
-			var androidVersion int
-			var wifiSSID = ""
-			var charging = false
+
 			adbDevice := connectDevices[serial]
 			if adbDevice != nil {
-				state, err := adbDevice.State()
-				if err != nil {
-					stateStr = ""
-				} else {
-					stateStr = state.String()
-				}
+				var androidId string
+				state, stateErr := adbDevice.State()
 
-				if _, ok := syncing[serial]; ok {
-					sync = true
-				}
 				if state == adb.StateOnline {
+					androidId, _ = shell.SettingsGetAndroidId(adbDevice)
+					if androidId != deviceInfo.Id {
+						OfflineCount++
+						devicesInfo = append(devicesInfo, deviceInfo)
+						continue
+					}
+					if _, ok := syncing[serial]; ok {
+						deviceInfo.Sync = true
+					}
 					simStates, _ := shell.GetPropGsmSimState(adbDevice)
 					simCount := len(simStates)
 					if simCount > 0 {
+						var sims []SimInfo
 						simAlphas, _ := shell.GetPropGsmSimOperatorAlpha(adbDevice)
 						isos, _ := shell.GetPropGsmSimOperatorIso(adbDevice)
 						networkTypes, _ := shell.GetPropGsmNetworkType(adbDevice)
@@ -108,35 +111,30 @@ func DevicesInfo() gin.HandlerFunc {
 								Iso:         isos[i],
 							})
 						}
+						deviceInfo.Sims = sims
 					}
 
 					wifi, _ := shell.SettingGetWifiOn(adbDevice)
 					if wifi {
-						wifiSSID, err = shell.DumpWifiInfoSsid(adbDevice)
+						wifiSSID, err := shell.DumpWifiInfoSsid(adbDevice)
+						deviceInfo.WiFiSSID = wifiSSID
 						wiFiConnected = err == nil
+						deviceInfo.WiFiConnected = wiFiConnected
 					}
-					batteryLevel, _ = shell.DumpBatteryLevel(adbDevice)
+					batteryLevel, _ := shell.DumpBatteryLevel(adbDevice)
+					deviceInfo.Battery = batteryLevel
 					poweredTypes, _ := shell.DumpBatteryPoweredType(adbDevice)
-					charging = len(poweredTypes) > 0
-					androidVersion, _ = shell.GetPropBuildVersionRelease(adbDevice)
+					deviceInfo.Charging = len(poweredTypes) > 0
+					androidVersion, _ := shell.GetPropBuildVersionRelease(adbDevice)
+					deviceInfo.AndroidVersion = androidVersion
+				}
+				if stateErr == nil {
+					deviceInfo.Status = state.String()
 				}
 			} else {
 				OfflineCount++
 			}
-
-			devicesInfo = append(devicesInfo, DeviceInfo{
-				device.Id,
-				device.BuildName(),
-				0,
-				stateStr,
-				sync,
-				sims,
-				wiFiConnected,
-				wifiSSID,
-				batteryLevel,
-				charging,
-				androidVersion,
-			})
+			devicesInfo = append(devicesInfo, deviceInfo)
 		}
 		//没用授权通过得设备不会入库
 		for _, device := range connectDevices {

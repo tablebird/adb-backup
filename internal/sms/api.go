@@ -2,6 +2,7 @@ package sms
 
 import (
 	"adb-backup/internal/config"
+	"adb-backup/internal/database"
 	"adb-backup/internal/device"
 	"adb-backup/internal/shell"
 	"net/http"
@@ -303,7 +304,16 @@ func SendMessage() gin.HandlerFunc {
 			return
 		}
 
-		dev := device.GetDevice(req.DeviceId)
+		dbDevice, err := database.FindDeviceById(req.DeviceId)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code": 400,
+				"msg":  "设备不存在",
+				"data": nil,
+			})
+		}
+
+		dev := device.GetDevice(dbDevice.Serial)
 		if dev == nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"code": 400,
@@ -359,9 +369,10 @@ func SendMessage() gin.HandlerFunc {
 				"msg":  "发送失败",
 				"data": nil,
 			})
+			return
 		}
 
-		sync := device.GetSmsSync(req.DeviceId)
+		sync := device.GetSmsSync(dbDevice.Serial)
 		if sync != nil {
 			sync.SyncSms()
 		}

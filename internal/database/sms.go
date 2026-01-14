@@ -31,3 +31,7 @@ func FindLastSms(deviceId string) (Sms, error) {
 func CreateInBatches(sms []Sms) error {
 	return db.CreateInBatches(sms, 100).Error
 }
+
+func UpdateSmsDeviceId(deviceId string, newDeviceId string) {
+	db.Model(&Sms{}).Where("device_id = ?", deviceId).Update("device_id", newDeviceId)
+}

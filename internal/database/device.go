@@ -51,3 +51,7 @@ func CreateDevice(device *Device) error {
 func UpdateDevice(device *Device) error {
 	return db.Save(&device).Error
 }
+
+func UpdateDeviceId(id string, newId string) error {
+	return db.Model(&Device{}).Where("id = ?", id).Update("id", newId).Error
+}

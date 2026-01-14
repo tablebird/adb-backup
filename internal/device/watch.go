@@ -71,20 +71,14 @@ func checkAndSyncDevices() {
 		}
 	}
 
-	// 查询数据库中的设备
-	var dbDevices, er = database.FindDevice(currentSerials)
-	if er != nil {
-		log.FatalF("查询设备错误：%v", er)
-	}
-
 	// 处理每个设备
 	for _, deviceInfo := range devices {
-		handleDevice(deviceInfo, dbDevices)
+		handleDevice(deviceInfo)
 	}
 
 }
 
-func handleDevice(deviceInfo *adb.DeviceInfo, dbDevices []database.Device) {
+func handleDevice(deviceInfo *adb.DeviceInfo) {
 	serial := deviceInfo.Serial
 
 	// 检查设备是否已在同步
@@ -113,25 +107,32 @@ func handleDevice(deviceInfo *adb.DeviceInfo, dbDevices []database.Device) {
 		log.WarningF("设备 %s 状态为 %s，跳过", deviceInfo.Serial, state)
 		return
 	}
-
-	log.SuccessF("检测到新的设备 %s，已经开始同步", deviceInfo)
+	androidId, aErr := shell.SettingsGetAndroidId(adbDevice)
+	if aErr != nil || androidId == "" {
+		log.WarningF("设备 %s 无法获取androidId", deviceInfo.Serial)
+		return
+	}
 
 	// 查找或创建设备记录
-	var device database.Device
-	found := false
-	for _, dbDevice := range dbDevices {
-		if dbDevice.Serial == serial {
-			device = dbDevice
-			found = true
-			break
+	device, err := database.FindDeviceById(androidId)
+	if err != nil {
+		serialDevice, err := database.FindDeviceById(deviceInfo.Serial)
+		if err == nil {
+			if serialDevice.Id != "" && serialDevice.Product == deviceInfo.Product && serialDevice.Model == deviceInfo.Model && serialDevice.Info == deviceInfo.DeviceInfo && serialDevice.Usb == deviceInfo.Usb {
+				serialDevice.Id = androidId
+				database.UpdateDeviceId(serial, androidId)
+				database.UpdateSmsDeviceId(serial, androidId)
+				device = serialDevice
+			}
 		}
 	}
-	if !found {
+
+	if device.Id == "" {
 		// 创建新设备
 		manufacturer, _ := shell.GetPropProductManufacturer(adbDevice)
 		marketingName, _ := shell.GetMarketingName(adbDevice)
 		device = database.Device{
-			Id:            serial,
+			Id:            androidId,
 			Serial:        serial,
 			Product:       deviceInfo.Product,
 			Model:         deviceInfo.Model,
@@ -158,7 +159,6 @@ func handleDevice(deviceInfo *adb.DeviceInfo, dbDevices []database.Device) {
 			device.MarketingName = marketingName
 		}
 		if change {
-			database.UpdateDevice(&device)
 			database.UpdateDevice(&device)
 		}
 	}
@@ -187,6 +187,7 @@ func handleDevice(deviceInfo *adb.DeviceInfo, dbDevices []database.Device) {
 			return
 		}
 	}(device)
+	log.SuccessF("检测到新的设备 %s，已经开始同步", deviceInfo)
 }
 
 func initClient() {

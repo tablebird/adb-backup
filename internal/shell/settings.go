@@ -38,3 +38,7 @@ func SettingGetInt(d *adb.Device, sys string) (int, error) {
 func SettingGetWifiOn(d *adb.Device) (bool, error) {
 	return SettingGetBool(d, "global wifi_on")
 }
+
+func SettingsGetAndroidId(d *adb.Device) (string, error) {
+	return SettingsGet(d, "secure android_id")
+}

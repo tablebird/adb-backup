@@ -27,7 +27,7 @@ func SmsPage() gin.HandlerFunc {
 			h["DeviceName"] = dbDevice.BuildName()
 		}
 		if config.Feature.EnableSendSms {
-			adbDevice := device.GetDevice(deviceId)
+			adbDevice := device.GetDevice(dbDevice.Serial)
 			if adbDevice != nil {
 				networkTypes, err := shell.GetPropGsmNetworkType(adbDevice)
 				if err == nil {
