@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -15,6 +16,9 @@ func SettingsGet(d *adb.Device, sys string) (string, error) {
 	command, err := d.RunCommand(_SETTINGS_GET + " " + sys)
 	if err != nil {
 		return command, err
+	}
+	if strings.Contains(command, "Can't find service: settings") {
+		return "", fmt.Errorf("%s", command)
 	}
 	return strings.TrimSpace(command), nil
 }
