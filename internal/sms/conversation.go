@@ -2,6 +2,7 @@ package sms
 
 import (
 	"adb-backup/internal/database"
+	"adb-backup/internal/log"
 	"time"
 )
 
@@ -32,25 +33,35 @@ func getConversations(deviceId string, offset int, pageSize int, address string)
 	// 注：假设你的短信表名为sms，且有device_id字段关联设备
 	query := `
 		SELECT 
-			thread_id, 
-			address, 
-			(SELECT body FROM sms WHERE thread_id = t.thread_id AND device_id = $1 ORDER BY date DESC LIMIT 1) as last_message,
-			(SELECT date FROM sms WHERE thread_id = t.thread_id AND device_id = $1 ORDER BY date DESC LIMIT 1) as last_date
+			s1.thread_id,
+			s1.address,
+			s1.body as last_message,
+			s1.date as last_date
 		FROM 
-			sms t
+			sms s1
+		INNER JOIN (
+			SELECT 
+				thread_id,
+				MAX(date) as max_date
+			FROM 
+				sms
+			WHERE 
+				device_id = $1
+				AND address LIKE $2
+			GROUP BY 
+				thread_id
+		) s2 ON s1.thread_id = s2.thread_id AND s1.date = s2.max_date
 		WHERE 
-			t.device_id = $1
-			AND t.address LIKE $2
-		GROUP BY 
-			t.thread_id, t.address
+			s1.device_id = $1
 		ORDER BY 
-			last_date DESC
+			s1.date DESC
 		LIMIT $3 OFFSET $4;
 	`
 	var conversations []Conversation
 
 	rows, err := db.Raw(query, deviceId, "%"+address+"%", pageSize, offset).Rows()
 	if err != nil {
+		log.WarningF("getConversations error %s", err.Error())
 		return nil, err
 	}
 	defer rows.Close()
