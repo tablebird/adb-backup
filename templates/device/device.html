@@ -209,31 +209,35 @@
 
         // 刷新按钮动画
         const refreshBtn = document.getElementById('refreshBtn');
+
+        function refreshDevice() {
+            document.querySelector('.fa-refresh').classList.add('fa-spin');
+            fetch('/api/device/refreshScan', {
+                method: 'GET',
+            }).then((response) => {
+                if (!response.ok) {
+                    throw new Error('刷新失败');
+                }
+                return response.json();
+            }).then(data => {
+                if (data.code == 200) {
+                    window.location.reload();
+                } else {
+                    showToast(data.msg)
+                    document.querySelector('.fa-refresh').classList.remove('fa-spin');
+                }
+            }).catch(() => {
+                document.querySelector('.fa-refresh').classList.remove('fa-spin');
+            });
+        }
+
         refreshBtn.addEventListener('click', function() {
-            this.querySelector('.fa-refresh').classList.add('fa-spin');
-            window.location.reload();
+            refreshDevice();
         });
         const refreshScanDeviceBtn = document.getElementById('refreshScanDeviceBtn');
         if (refreshScanDeviceBtn) {
             refreshScanDeviceBtn.addEventListener('click', function() {
-                this.querySelector('.fa-refresh').classList.add('fa-spin');
-                fetch('/api/device/refreshScan', {
-                    method: 'GET',
-                }).then((response) => {
-                    if (!response.ok) {
-                        throw new Error('刷新失败');
-                    }
-                    return response.json();
-                }).then(data => {
-                    if (data.code == 200) {
-                        window.location.reload();
-                    } else {
-                        showToast(data.msg)
-                        this.querySelector('.fa-refresh').classList.remove('fa-spin');
-                    }
-                }).catch(() => {
-                    this.querySelector('.fa-refresh').classList.remove('fa-spin');
-                });
+                refreshDevice();
             });
         }
 
