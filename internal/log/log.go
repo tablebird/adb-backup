@@ -10,11 +10,11 @@ import (
 
 // ANSI 颜色代码
 const (
-	ColorReset  = "\033[0m"
-	ColorRed    = "\033[31m"
-	ColorGreen  = "\033[32m"
-	ColorYellow = "\033[33m"
-	ColorBlue   = "\033[34m"
+	colorReset  = "\033[0m"
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
+	colorYellow = "\033[33m"
+	colorBlue   = "\033[34m"
 )
 
 func DebugF(format string, v ...interface{}) {
@@ -34,27 +34,27 @@ func InfoF(format string, v ...interface{}) {
 }
 
 func SuccessF(format string, v ...interface{}) {
-	log.Printf(ColorGreen+format+ColorReset, v...)
+	log.Printf(colorGreen+format+colorReset, v...)
 }
 
 func Warning(v string) {
-	log.Println(ColorYellow + v + ColorReset)
+	log.Println(colorYellow + v + colorReset)
 }
 
 func WarningF(format string, v ...interface{}) {
-	log.Printf(ColorYellow+format+ColorReset, v...)
+	log.Printf(colorYellow+format+colorReset, v...)
 }
 
 func ErrorF(format string, v ...interface{}) {
-	log.Printf(ColorRed+format+ColorReset, v...)
+	log.Printf(colorRed+format+colorReset, v...)
 }
 
 func Fatal(v ...interface{}) {
-	log.Println(ColorRed, fmt.Sprint(v...), ColorReset)
+	log.Println(colorRed, fmt.Sprint(v...), colorReset)
 	os.Exit(1)
 }
 
 func FatalF(format string, v ...interface{}) {
-	log.Printf(ColorRed+format+ColorReset, v...)
+	log.Printf(colorRed+format+colorReset, v...)
 	os.Exit(1)
 }

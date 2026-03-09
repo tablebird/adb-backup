@@ -90,13 +90,9 @@ func scanAllDevices() {
 		log.Fatal(err)
 	}
 
-	// 当前连接的设备序列号
-	var currentSerials []string
-
 	// 处理每个设备
 	for _, deviceInfo := range devices {
 		handleDevice(deviceInfo)
-		currentSerials = append(currentSerials, deviceInfo.Serial)
 	}
 }
 
