@@ -2,29 +2,27 @@ package shell
 
 import (
 	"strings"
-
-	adb "github.com/zach-klippenstein/goadb"
 )
 
-func GetMarketingName(d *adb.Device) (string, error) {
-	qemu, _ := GetPropKernelQemu(d)
+func GetMarketingName(s Shell) (string, error) {
+	qemu, _ := GetPropKernelQemu(s)
 	if qemu == "1" {
-		avdName, _ := GetPropBootQemuAvdName(d)
+		avdName, _ := GetPropBootQemuAvdName(s)
 		if avdName != "" {
 			return strings.ReplaceAll(avdName, "_", " "), nil
 		}
 	}
-	manufacturer, err := GetPropProductManufacturer(d)
+	manufacturer, err := GetPropProductManufacturer(s)
 	if err != nil {
 		return "", err
 	}
 	var marketingName = ""
 	switch manufacturer {
 	case "HUAWEI":
-		marketingName, _ = GetPropConfigMarketingName(d)
+		marketingName, _ = GetPropConfigMarketingName(s)
 	}
 	if marketingName != "" {
 		return marketingName, nil
 	}
-	return GetPropProductModel(d)
+	return GetPropProductModel(s)
 }

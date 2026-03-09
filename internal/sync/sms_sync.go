@@ -15,17 +15,16 @@ import (
 	"time"
 
 	uuid "github.com/google/uuid"
-	adb "github.com/zach-klippenstein/goadb"
 )
 
 type SmsSync interface {
 	NowSync[[]database.Sms]
 }
 
-func NewSmsSync(dbDevice *database.Device, device *adb.Device, newNotify notify.Interface) SmsSync {
+func NewSmsSync(dbDevice *database.Device, device shell.Shell, newNotify notify.Interface) SmsSync {
 	return &shellSmsSync{
 		dbDevice:  dbDevice,
-		device:    device,
+		s:         device,
 		newNotify: newNotify,
 	}
 }
@@ -33,7 +32,7 @@ func NewSmsSync(dbDevice *database.Device, device *adb.Device, newNotify notify.
 type shellSmsSync struct {
 	dbDevice *database.Device
 
-	device *adb.Device
+	s shell.Shell
 
 	newNotify notify.Interface
 
@@ -88,7 +87,7 @@ func (s *shellSmsSync) SyncNow() ([]database.Sms, error) {
 	if !s.smsLastDate.IsZero() {
 		s.contentQuery.Where = fmt.Sprintf("date>%d", s.smsLastDate.UnixMilli())
 	}
-	result, err := s.contentQuery.QueryRow(s.device)
+	result, err := s.contentQuery.QueryRow(s.s)
 	if err != nil {
 		s.syncMutex.Unlock()
 		return nil, fmt.Errorf("读取短信错误： %w", err)

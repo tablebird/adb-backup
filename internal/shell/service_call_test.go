@@ -5,12 +5,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	adb "github.com/zach-klippenstein/goadb"
 )
 
 func TestServiceCallError(t *testing.T) {
-	client, _ := adb.NewWithConfig(adb.ServerConfig{})
-	device := client.Device(adb.DeviceWithSerial(DEVICE_TEST_SERIAL))
+	device := BuildShell()
 	res, err := ServiceCall(device, _ISMS, "21")
 	assert.NoError(t, err)
 	assert.Equal(t, "unknown", res)
@@ -20,8 +18,7 @@ func TestServiceCallError(t *testing.T) {
 }
 
 func TestServiceCallIsmsError(t *testing.T) {
-	client, _ := adb.NewWithConfig(adb.ServerConfig{})
-	device := client.Device(adb.DeviceWithSerial(DEVICE_TEST_SERIAL))
+	device := BuildShell()
 	res, err := ServiceCall(device, _ISMS, "5",
 		_TYPE_INTEGER, strconv.Itoa(0),
 		_TYPE_STRING, "com.android.mms.service",
@@ -38,8 +35,7 @@ func TestServiceCallIsmsError(t *testing.T) {
 }
 
 func TestServiceCallIsmsSendMessage(t *testing.T) {
-	client, _ := adb.NewWithConfig(adb.ServerConfig{})
-	device := client.Device(adb.DeviceWithSerial(DEVICE_TEST_SERIAL))
+	device := BuildShell()
 	res, err := ServiceCallIsmsSendMessage(device, 0, "10010", "message")
 	assert.NoError(t, err)
 	assert.True(t, res)

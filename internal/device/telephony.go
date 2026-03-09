@@ -3,8 +3,6 @@ package device
 import (
 	"adb-backup/internal/shell"
 	"strings"
-
-	adb "github.com/zach-klippenstein/goadb"
 )
 
 type TelephonyManager interface {
@@ -19,31 +17,31 @@ type TelephonyManager interface {
 }
 
 type shellTelephony struct {
-	adbDevice *adb.Device
+	s shell.Shell
 }
 
 func (t *shellTelephony) GetSimState() ([]string, error) {
-	return shell.GetPropGsmSimState(t.adbDevice)
+	return shell.GetPropGsmSimState(t.s)
 }
 
 func (t *shellTelephony) GetSimOperatorAlpha() ([]string, error) {
-	return shell.GetPropGsmSimOperatorAlpha(t.adbDevice)
+	return shell.GetPropGsmSimOperatorAlpha(t.s)
 }
 
 func (t *shellTelephony) GetSimOperatorIso() ([]string, error) {
-	return shell.GetPropGsmSimOperatorIso(t.adbDevice)
+	return shell.GetPropGsmSimOperatorIso(t.s)
 }
 
 func (t *shellTelephony) GetSimOperatorNumeric() ([]string, error) {
-	return shell.GetPropGsmSimOperatorNumeric(t.adbDevice)
+	return shell.GetPropGsmSimOperatorNumeric(t.s)
 }
 
 func (t *shellTelephony) GetNetworkType() ([]string, error) {
-	return shell.GetPropGsmNetworkType(t.adbDevice)
+	return shell.GetPropGsmNetworkType(t.s)
 }
 
 func (t *shellTelephony) GetNetworkTypeVisualName() ([]string, error) {
-	types, err := shell.GetPropGsmNetworkType(t.adbDevice)
+	types, err := shell.GetPropGsmNetworkType(t.s)
 	if err != nil {
 		return nil, err
 	}
@@ -56,11 +54,11 @@ func (t *shellTelephony) GetNetworkTypeVisualName() ([]string, error) {
 }
 
 func (t *shellTelephony) GetOperatorAlpha() ([]string, error) {
-	return shell.GetPropGsmOperatorAlpha(t.adbDevice)
+	return shell.GetPropGsmOperatorAlpha(t.s)
 }
 
 func (t *shellTelephony) GetOperatorNumeric() ([]string, error) {
-	return shell.GetPropGsmOperatorNumeric(t.adbDevice)
+	return shell.GetPropGsmOperatorNumeric(t.s)
 }
 
 // 将 getprop gsm.network.type 的值转换为手机信号栏显示的文本

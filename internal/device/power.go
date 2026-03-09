@@ -3,8 +3,6 @@ package device
 import (
 	"adb-backup/internal/log"
 	"adb-backup/internal/shell"
-
-	adb "github.com/zach-klippenstein/goadb"
 )
 
 type PowerManager interface {
@@ -13,11 +11,11 @@ type PowerManager interface {
 }
 
 type shellPower struct {
-	adbDevice *adb.Device
+	s shell.Shell
 }
 
 func (p *shellPower) BatteryLevel() int {
-	level, err := shell.DumpBatteryLevel(p.adbDevice)
+	level, err := shell.DumpBatteryLevel(p.s)
 	if err != nil {
 		return 0
 	}
@@ -25,7 +23,7 @@ func (p *shellPower) BatteryLevel() int {
 }
 
 func (p *shellPower) CharingType() []BatteryPoweredType {
-	charging, err := shell.DumpBatteryPoweredType(p.adbDevice)
+	charging, err := shell.DumpBatteryPoweredType(p.s)
 	if err != nil {
 		return nil
 	}

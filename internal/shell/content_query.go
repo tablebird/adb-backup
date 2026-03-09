@@ -7,8 +7,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	adb "github.com/zach-klippenstein/goadb"
 )
 
 const (
@@ -26,7 +24,7 @@ type ContentQuery struct {
 	Distinct   bool
 }
 
-func (c *ContentQuery) Query(d *adb.Device) (string, error) {
+func (c *ContentQuery) Query(s Shell) (string, error) {
 	if c.Uri == "" {
 		return "", errors.New("uri is empty")
 	}
@@ -50,7 +48,7 @@ func (c *ContentQuery) Query(d *adb.Device) (string, error) {
 		commandStr += " --distinct"
 	}
 
-	command, err := d.RunCommand(commandStr)
+	command, err := s.RunCommand(commandStr)
 	if err != nil {
 		return command, err
 	}
@@ -63,16 +61,16 @@ func (c *ContentQuery) Query(d *adb.Device) (string, error) {
 	}
 }
 
-func (c *ContentQuery) QueryRow(d *adb.Device) (iter.Seq2[int, string], error) {
-	result, err := c.Query(d)
+func (c *ContentQuery) QueryRow(s Shell) (iter.Seq2[int, string], error) {
+	result, err := c.Query(s)
 	if err != nil {
 		return nil, err
 	}
 	return parseQueryResult(result), nil
 }
 
-func (c *ContentQuery) QueryRowMap(d *adb.Device) (iter.Seq2[int, map[string]string], error) {
-	result, err := c.QueryRow(d)
+func (c *ContentQuery) QueryRowMap(s Shell) (iter.Seq2[int, map[string]string], error) {
+	result, err := c.QueryRow(s)
 	if err != nil {
 		return nil, err
 	}

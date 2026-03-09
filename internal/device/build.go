@@ -2,8 +2,6 @@ package device
 
 import (
 	"adb-backup/internal/shell"
-
-	adb "github.com/zach-klippenstein/goadb"
 )
 
 type Build interface {
@@ -11,11 +9,11 @@ type Build interface {
 }
 
 type shellBuild struct {
-	adbDevice *adb.Device
+	s shell.Shell
 }
 
 func (b *shellBuild) VersionRelease() int {
-	result, err := shell.GetPropBuildVersionRelease(b.adbDevice)
+	result, err := shell.GetPropBuildVersionRelease(b.s)
 	if err == nil {
 		return 0
 	}

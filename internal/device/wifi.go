@@ -2,8 +2,6 @@ package device
 
 import (
 	"adb-backup/internal/shell"
-
-	adb "github.com/zach-klippenstein/goadb"
 )
 
 type WifiManager interface {
@@ -13,11 +11,11 @@ type WifiManager interface {
 }
 
 type shellWifi struct {
-	adbDevice *adb.Device
+	s shell.Shell
 }
 
 func (w *shellWifi) IsEnabled() bool {
-	wifi, err := shell.SettingsGetWifiOn(w.adbDevice)
+	wifi, err := shell.SettingsGetWifiOn(w.s)
 	if err != nil {
 		return false
 	}
@@ -25,7 +23,7 @@ func (w *shellWifi) IsEnabled() bool {
 }
 
 func (w *shellWifi) WifiSSid() (ssid string, connect bool) {
-	wifiSSID, err := shell.DumpWifiInfoSsid(w.adbDevice)
+	wifiSSID, err := shell.DumpWifiInfoSsid(w.s)
 	ssid = wifiSSID
 	connect = err == nil
 	return

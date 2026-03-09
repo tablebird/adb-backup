@@ -4,24 +4,22 @@ import (
 	"errors"
 	"strconv"
 	"strings"
-
-	adb "github.com/zach-klippenstein/goadb"
 )
 
 const (
 	_DUMP_SYS = "dumpsys"
 )
 
-func DumpSys(d *adb.Device, sys string) (string, error) {
-	command, err := d.RunCommand(_DUMP_SYS + " " + sys)
+func DumpSys(s Shell, sys string) (string, error) {
+	command, err := s.RunCommand(_DUMP_SYS + " " + sys)
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(command), nil
 }
 
-func DumpWifiInfoSsid(d *adb.Device) (string, error) {
-	res, err := DumpSys(d, "wifi  | grep \"mWifiInfo SSID:\"")
+func DumpWifiInfoSsid(s Shell) (string, error) {
+	res, err := DumpSys(s, "wifi  | grep \"mWifiInfo SSID:\"")
 	if err != nil {
 		return "", err
 	}
@@ -44,8 +42,8 @@ func _parseWifiInfoSsid(res string) (string, error) {
 	return "", errors.New("not connect")
 }
 
-func DumpBatteryLevel(d *adb.Device) (int, error) {
-	res, err := DumpSys(d, "battery | grep level:")
+func DumpBatteryLevel(s Shell) (int, error) {
+	res, err := DumpSys(s, "battery | grep level:")
 	if err != nil {
 		return int(0), err
 	}
@@ -72,8 +70,8 @@ func _parseBatteryLevel(res string) (int, error) {
 	return int(0), err
 }
 
-func DumpBatteryPoweredType(d *adb.Device) ([]string, error) {
-	res, err := DumpSys(d, "battery | grep powered:")
+func DumpBatteryPoweredType(s Shell) ([]string, error) {
+	res, err := DumpSys(s, "battery | grep powered:")
 	if err != nil {
 		return nil, err
 	}

@@ -4,16 +4,14 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	adb "github.com/zach-klippenstein/goadb"
 )
 
 const (
 	_SETTINGS_GET = "settings get"
 )
 
-func SettingsGet(d *adb.Device, sys string) (string, error) {
-	command, err := d.RunCommand(_SETTINGS_GET + " " + sys)
+func SettingsGet(s Shell, sys string) (string, error) {
+	command, err := s.RunCommand(_SETTINGS_GET + " " + sys)
 	if err != nil {
 		return command, err
 	}
@@ -23,26 +21,26 @@ func SettingsGet(d *adb.Device, sys string) (string, error) {
 	return strings.TrimSpace(command), nil
 }
 
-func SettingsGetBool(d *adb.Device, sys string) (bool, error) {
-	command, err := SettingsGet(d, sys)
+func SettingsGetBool(s Shell, sys string) (bool, error) {
+	command, err := SettingsGet(s, sys)
 	if err != nil {
 		return false, err
 	}
 	return command == "1" || command == "true", nil
 }
 
-func SettingsGetInt(d *adb.Device, sys string) (int, error) {
-	command, err := SettingsGet(d, sys)
+func SettingsGetInt(s Shell, sys string) (int, error) {
+	command, err := SettingsGet(s, sys)
 	if err != nil {
 		return 0, err
 	}
 	return strconv.Atoi(strings.TrimSpace(command))
 }
 
-func SettingsGetWifiOn(d *adb.Device) (bool, error) {
-	return SettingsGetBool(d, "global wifi_on")
+func SettingsGetWifiOn(s Shell) (bool, error) {
+	return SettingsGetBool(s, "global wifi_on")
 }
 
-func SettingsGetAndroidId(d *adb.Device) (string, error) {
-	return SettingsGet(d, "secure android_id")
+func SettingsGetAndroidId(s Shell) (string, error) {
+	return SettingsGet(s, "secure android_id")
 }

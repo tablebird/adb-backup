@@ -3,32 +3,30 @@ package shell
 import (
 	"strconv"
 	"strings"
-
-	adb "github.com/zach-klippenstein/goadb"
 )
 
 const (
 	_GET_PROP = "getprop"
 )
 
-func GetProp(d *adb.Device, prop string) (string, error) {
-	command, err := d.RunCommand(_GET_PROP + " " + prop)
+func GetProp(s Shell, prop string) (string, error) {
+	command, err := s.RunCommand(_GET_PROP + " " + prop)
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(command), nil
 }
 
-func GetPropInt(d *adb.Device, prop string) (int, error) {
-	command, err := GetProp(d, prop)
+func GetPropInt(s Shell, prop string) (int, error) {
+	command, err := GetProp(s, prop)
 	if err != nil {
 		return 0, err
 	}
 	return strconv.Atoi(strings.TrimSpace(command))
 }
 
-func GetPropCommaArray(d *adb.Device, prop string) ([]string, error) {
-	command, err := GetProp(d, prop)
+func GetPropCommaArray(s Shell, prop string) ([]string, error) {
+	command, err := GetProp(s, prop)
 	if err != nil {
 		return nil, err
 	}
@@ -39,75 +37,75 @@ func GetPropCommaArray(d *adb.Device, prop string) ([]string, error) {
 	return split, nil
 }
 
-func GetPropGsmOperatorAlpha(d *adb.Device) ([]string, error) {
-	return GetPropCommaArray(d, "gsm.operator.alpha")
+func GetPropGsmOperatorAlpha(s Shell) ([]string, error) {
+	return GetPropCommaArray(s, "gsm.operator.alpha")
 }
 
-func GetPropGsmOperatorNumeric(d *adb.Device) ([]string, error) {
-	return GetPropCommaArray(d, "gsm.operator.numeric")
+func GetPropGsmOperatorNumeric(s Shell) ([]string, error) {
+	return GetPropCommaArray(s, "gsm.operator.numeric")
 }
 
-func GetPropGsmNetworkType(d *adb.Device) ([]string, error) {
-	return GetPropCommaArray(d, "gsm.network.type")
+func GetPropGsmNetworkType(s Shell) ([]string, error) {
+	return GetPropCommaArray(s, "gsm.network.type")
 }
 
 // gsm.sim.state=READY,NOT_READY
-func GetPropGsmSimState(d *adb.Device) ([]string, error) {
-	return GetPropCommaArray(d, "gsm.sim.state")
+func GetPropGsmSimState(s Shell) ([]string, error) {
+	return GetPropCommaArray(s, "gsm.sim.state")
 }
 
-func GetPropGsmSimOperatorAlpha(d *adb.Device) ([]string, error) {
-	return GetPropCommaArray(d, "gsm.sim.operator.alpha")
+func GetPropGsmSimOperatorAlpha(s Shell) ([]string, error) {
+	return GetPropCommaArray(s, "gsm.sim.operator.alpha")
 }
 
 // gsm.sim.operator.numeric=112233
-func GetPropGsmSimOperatorNumeric(d *adb.Device) ([]string, error) {
-	return GetPropCommaArray(d, "gsm.sim.operator.numeric")
+func GetPropGsmSimOperatorNumeric(s Shell) ([]string, error) {
+	return GetPropCommaArray(s, "gsm.sim.operator.numeric")
 }
 
-func GetPropGsmSimOperatorIso(d *adb.Device) ([]string, error) {
-	return GetPropCommaArray(d, "gsm.sim.operator.iso-country")
+func GetPropGsmSimOperatorIso(s Shell) ([]string, error) {
+	return GetPropCommaArray(s, "gsm.sim.operator.iso-country")
 }
 
 // xiaomi persist.radio.active.slots=2
-func GetPropPersistRadioActiveSlots(d *adb.Device) (int, error) {
-	return GetPropInt(d, "persist.radio.active.slots")
+func GetPropPersistRadioActiveSlots(s Shell) (int, error) {
+	return GetPropInt(s, "persist.radio.active.slots")
 }
 
 // xiaomi ro.telephony.sim_slots.count=2
-func GetPropTelephonySimSlotsCount(d *adb.Device) (int, error) {
-	return GetPropInt(d, "ro.telephony.sim_slots.count")
+func GetPropTelephonySimSlotsCount(s Shell) (int, error) {
+	return GetPropInt(s, "ro.telephony.sim_slots.count")
 }
 
 // xiaomi ro.telephony.default_cdma_sub=0
-func GetPropTelephonyDefaultCdmaSub(d *adb.Device) (int, error) {
-	return GetPropInt(d, "ro.telephony.default_cdma_sub")
+func GetPropTelephonyDefaultCdmaSub(s Shell) (int, error) {
+	return GetPropInt(s, "ro.telephony.default_cdma_sub")
 }
 
-func GetPropBuildVersionRelease(d *adb.Device) (int, error) {
-	return GetPropInt(d, "ro.build.version.release")
+func GetPropBuildVersionRelease(s Shell) (int, error) {
+	return GetPropInt(s, "ro.build.version.release")
 }
 
-func GetPropProductManufacturer(d *adb.Device) (string, error) {
-	return GetProp(d, "ro.product.manufacturer")
+func GetPropProductManufacturer(s Shell) (string, error) {
+	return GetProp(s, "ro.product.manufacturer")
 }
 
-func GetPropProductModel(d *adb.Device) (string, error) {
-	return GetProp(d, "ro.product.model")
+func GetPropProductModel(s Shell) (string, error) {
+	return GetProp(s, "ro.product.model")
 }
 
-func GetPropProductBrand(d *adb.Device) (string, error) {
-	return GetProp(d, "ro.product.brand")
+func GetPropProductBrand(s Shell) (string, error) {
+	return GetProp(s, "ro.product.brand")
 }
 
-func GetPropConfigMarketingName(d *adb.Device) (string, error) {
-	return GetProp(d, "ro.config.marketing_name")
+func GetPropConfigMarketingName(s Shell) (string, error) {
+	return GetProp(s, "ro.config.marketing_name")
 }
 
-func GetPropKernelQemu(d *adb.Device) (string, error) {
-	return GetProp(d, "ro.kernel.qemu")
+func GetPropKernelQemu(s Shell) (string, error) {
+	return GetProp(s, "ro.kernel.qemu")
 }
 
-func GetPropBootQemuAvdName(d *adb.Device) (string, error) {
-	return GetProp(d, "ro.boot.qemu.avd_name")
+func GetPropBootQemuAvdName(s Shell) (string, error) {
+	return GetProp(s, "ro.boot.qemu.avd_name")
 }

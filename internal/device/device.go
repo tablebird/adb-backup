@@ -99,35 +99,35 @@ func (p *shellConnectDevice) GetTelephony() TelephonyManager {
 	if p.State() != StateOnline {
 		return nil
 	}
-	return &shellTelephony{adbDevice: p.adbDevice}
+	return &shellTelephony{s: p.adbDevice}
 }
 
 func (p *shellConnectDevice) GetWifi() WifiManager {
 	if p.State() != StateOnline {
 		return nil
 	}
-	return &shellWifi{adbDevice: p.adbDevice}
+	return &shellWifi{s: p.adbDevice}
 }
 
 func (p *shellConnectDevice) GetPower() PowerManager {
 	if p.State() != StateOnline {
 		return nil
 	}
-	return &shellPower{adbDevice: p.adbDevice}
+	return &shellPower{s: p.adbDevice}
 }
 
 func (p *shellConnectDevice) GetBuild() Build {
 	if p.State() != StateOnline {
 		return nil
 	}
-	return &shellBuild{adbDevice: p.adbDevice}
+	return &shellBuild{s: p.adbDevice}
 }
 
 func (p *shellConnectDevice) GetIsms() Isms {
 	if p.State() != StateOnline {
 		return nil
 	}
-	return &shellIsms{adbDevice: p.adbDevice, smsSync: p.sync.(sync.SmsSync)}
+	return &shellIsms{s: p.adbDevice, smsSync: p.sync.(sync.SmsSync)}
 }
 
 func (p *shellConnectDevice) initDeviceDB() error {

@@ -5,8 +5,6 @@ import (
 	"adb-backup/internal/sync"
 	"errors"
 	"strings"
-
-	adb "github.com/zach-klippenstein/goadb"
 )
 
 type Isms interface {
@@ -14,12 +12,12 @@ type Isms interface {
 }
 
 type shellIsms struct {
-	adbDevice *adb.Device
-	smsSync   sync.SmsSync
+	s       shell.Shell
+	smsSync sync.SmsSync
 }
 
 func (i *shellIsms) SendMessage(subId int, address string, body string) (id string, resErr error) {
-	networkTypes, err := shell.GetPropGsmNetworkType(i.adbDevice)
+	networkTypes, err := shell.GetPropGsmNetworkType(i.s)
 
 	if err != nil {
 		resErr = err
@@ -35,7 +33,7 @@ func (i *shellIsms) SendMessage(subId int, address string, body string) (id stri
 		resErr = errors.New("Sim卡不可用")
 		return
 	}
-	res, err := shell.ServiceCallIsmsSendMessage(i.adbDevice, subId, address, body)
+	res, err := shell.ServiceCallIsmsSendMessage(i.s, subId, address, body)
 	if err != nil {
 		resErr = err
 		return
