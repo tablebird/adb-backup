@@ -840,6 +840,8 @@
                         loadNewMessages()
                     }
                 }
+            }).catch(error => {
+                showToast('发送失败：' + error.message)
             })
             .finally(() => {
                 messageInput.disabled = false;
