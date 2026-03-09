@@ -66,8 +66,14 @@ func InitWeb() {
 	r.POST("/api/sms/send", smsApi.SendMessage())
 
 	port := config.Web.WebPort
-	logWebUrl(port)
-	r.Run(fmt.Sprintf(":%d", port))
+	address := config.Web.Address
+	if address == "" {
+		logWebUrl(port)
+		r.Run(fmt.Sprintf(":%d", port))
+	} else {
+		log.InfoF("web url: http://%s:%d", address, port)
+		r.Run(fmt.Sprintf("%s:%d", address, port))
+	}
 }
 
 func logWebUrl(port int) {
