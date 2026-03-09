@@ -118,7 +118,7 @@ func handleDevice(deviceInfo *adb.DeviceInfo) {
 	if err != nil {
 		serialDevice, err := database.FindDeviceById(deviceInfo.Serial)
 		if err == nil {
-			if serialDevice.Id != "" && serialDevice.Product == deviceInfo.Product && serialDevice.Model == deviceInfo.Model && serialDevice.Info == deviceInfo.DeviceInfo && serialDevice.Usb == deviceInfo.Usb {
+			if serialDevice.Id != "" && serialDevice.Product == deviceInfo.Product && serialDevice.Model == deviceInfo.Model && serialDevice.Info == deviceInfo.DeviceInfo {
 				serialDevice.Id = androidId
 				database.UpdateDeviceId(serial, androidId)
 				database.UpdateSmsDeviceId(serial, androidId)
