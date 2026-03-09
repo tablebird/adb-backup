@@ -65,6 +65,9 @@ func hashPassword(password string) (string, error) {
 func Authenticate(authSource int, username, password string) (*User, error) {
 	if authSource <= 0 {
 		user, err := FindUserByName(username)
+		if user.SourceType != 0 {
+			return nil, fmt.Errorf("user not match auth source")
+		}
 		if err != nil || !user.CheckPassword(password) {
 			return nil, fmt.Errorf("password error")
 		}
