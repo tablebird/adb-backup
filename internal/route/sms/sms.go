@@ -5,6 +5,7 @@ import (
 	"adb-backup/internal/database"
 	"adb-backup/internal/device"
 	"adb-backup/internal/shell"
+	"adb-backup/internal/web/base"
 	"net/http"
 	"strings"
 
@@ -13,19 +14,13 @@ import (
 
 func SmsPage() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		r := c.Request
-		deviceId := r.URL.Query().Get("device_id")
-		if deviceId == "" {
-			c.Redirect(http.StatusFound, "/")
-			return
-		}
+		deviceId := c.GetString(base.ContextDeviceIdKey)
 		h := gin.H{
 			"DeviceID": deviceId,
 		}
-		dbDevice, err := database.FindDeviceById(deviceId)
-		if err == nil && dbDevice.Id != "" {
-			h["DeviceName"] = dbDevice.BuildName()
-		}
+		dbDevice := c.MustGet(base.TypeKey[database.Device]()).(database.Device)
+
+		h["DeviceName"] = dbDevice.BuildName()
 		if config.Feature.EnableSendSms {
 			adbDevice := device.GetDevice(dbDevice.Serial)
 			if adbDevice != nil {

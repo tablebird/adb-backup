@@ -3,7 +3,7 @@ package login
 import (
 	"adb-backup/internal/config"
 	"adb-backup/internal/database"
-	"net/http"
+	"adb-backup/internal/web/base"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,13 +16,13 @@ func Login() gin.HandlerFunc {
 			AuthSource int    `json:"auth_source"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(400, gin.H{"error": err.Error()})
+			base.RespJsonBadRequest(c, "请求参数错误")
 			return
 		}
 
 		user, err := database.Authenticate(req.AuthSource, req.Username, req.Password)
 		if err != nil {
-			c.JSON(401, gin.H{"error": err.Error()})
+			base.RespJsonBadRequest(c, err.Error())
 			return
 		}
 
@@ -36,19 +36,13 @@ func Login() gin.HandlerFunc {
 			false,                   // Secure（HTTPS下启用）
 			true,                    // HttpOnly
 		)
-		c.JSON(http.StatusOK, gin.H{
-			"code": 200,
-			"msg":  "登录成功",
-		})
+		base.RespJsonSuccess(c, "登录成功", nil)
 	})
 }
 
 func LoginOut() gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
 		c.SetCookie("login_token", "", -1, "/", "", false, true)
-		c.JSON(http.StatusOK, gin.H{
-			"code": 200,
-			"msg":  "登出成功",
-		})
+		base.RespJsonSuccess(c, "登出成功", nil)
 	})
 }

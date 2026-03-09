@@ -6,6 +6,7 @@ import (
 	"adb-backup/internal/log"
 	"adb-backup/internal/shell"
 	"adb-backup/internal/utils"
+	"adb-backup/internal/web/base"
 	"fmt"
 	"net/http"
 	"time"
@@ -44,8 +45,7 @@ func DevicesInfo() gin.HandlerFunc {
 		}
 		devices, err := database.FindAllDevices()
 		if err != nil {
-
-			c.JSON(500, gin.H{"error": err.Error()})
+			base.RespJsonInternalServerError(c, err.Error())
 			return
 		}
 		allDevices := make(map[string]bool)

@@ -6,7 +6,7 @@ import (
 	"adb-backup/internal/device"
 	"adb-backup/internal/log"
 	"adb-backup/internal/shell"
-	"net/http"
+	"adb-backup/internal/web/base"
 	"strconv"
 	"strings"
 
@@ -27,7 +27,8 @@ type MessageResult struct {
 }
 
 type MessageSendReq struct {
-	DeviceId string `json:"device_id" binding:"required"`
+	base.ContextReq
+	DeviceId string `json:"device_id" binding:"required,deviceIdConnect"`
 	Address  string `json:"address" binding:"required"`
 	Body     string `json:"body" binding:"required"`
 	SubId    int    `json:"sub_id" binding:"oneof=0 1"`
@@ -37,20 +38,11 @@ func GetConversationsApiHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		r := c.Request
 		// 1. 获取设备ID参数
-		deviceId := r.URL.Query().Get("device_id")
+		deviceId := c.GetString(base.ContextDeviceIdKey)
 		pageStr := r.URL.Query().Get("page")
 		pageSizeStr := r.URL.Query().Get("page_size")
 		address := r.URL.Query().Get("address")
 
-		if deviceId == "" {
-			// 返回错误响应
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": 400,
-				"msg":  "设备ID不能为空",
-				"data": nil,
-			})
-			return
-		}
 		// 默认分页参数
 		page := 1
 		if pageStr != "" {
@@ -70,11 +62,7 @@ func GetConversationsApiHandler() gin.HandlerFunc {
 		// 查询总条数
 		totalCount, err := getConversationTotalCount(deviceId, address)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code": 500,
-				"msg":  "查询会话总数失败：" + err.Error(),
-				"data": nil,
-			})
+			base.RespJsonInternalServerError(c, "查询会话总数失败："+err.Error())
 			return
 		}
 
@@ -83,11 +71,7 @@ func GetConversationsApiHandler() gin.HandlerFunc {
 		// 2. 查询会话列表
 		conversations, err := getConversations(deviceId, offset, pageSize, address)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code": 500,
-				"msg":  "获取会话列表失败：" + err.Error(),
-				"data": nil,
-			})
+			base.RespJsonInternalServerError(c, "获取会话列表失败："+err.Error())
 			return
 		}
 		// 判断是否还有更多
@@ -101,11 +85,7 @@ func GetConversationsApiHandler() gin.HandlerFunc {
 		}
 
 		// 3. 返回成功响应
-		c.JSON(http.StatusOK, gin.H{
-			"code": 200,
-			"msg":  "获取成功",
-			"data": pageResult,
-		})
+		base.RespJsonSuccess(c, "获取成功", pageResult)
 	}
 }
 
@@ -114,17 +94,13 @@ func GetLatestMessagesApiHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		r := c.Request
 		// 1. 获取URL参数
-		deviceId := r.URL.Query().Get("device_id")
+		deviceId := c.GetString(base.ContextDeviceIdKey)
 		threadId := r.URL.Query().Get("thread_id")
 		pageSizeStr := r.URL.Query().Get("page_size")
 
 		// 2. 参数校验与转换
-		if deviceId == "" || threadId == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": 400,
-				"msg":  "设备ID和会话ID不能为空",
-				"data": nil,
-			})
+		if threadId == "" {
+			base.RespJsonBadRequest(c, "会话ID不能为空")
 			return
 		}
 		var err error
@@ -139,22 +115,14 @@ func GetLatestMessagesApiHandler() gin.HandlerFunc {
 		// 3. 查询总消息数（用于计算总页数）
 		totalCount, err := getMessageTotalCount(deviceId, threadId)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code": 500,
-				"msg":  "查询消息总数失败：" + err.Error(),
-				"data": nil,
-			})
+			base.RespJsonInternalServerError(c, "查询消息总数失败："+err.Error())
 			return
 		}
 
 		// 5. 查询当前页消息
 		messages, err := getLatestMessages(deviceId, threadId, pageSize)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code": 500,
-				"msg":  "获取消息列表失败：" + err.Error(),
-				"data": nil,
-			})
+			base.RespJsonInternalServerError(c, "获取消息列表失败："+err.Error())
 			return
 		}
 
@@ -168,11 +136,7 @@ func GetLatestMessagesApiHandler() gin.HandlerFunc {
 		}
 
 		// 8. 返回成功响应
-		c.JSON(http.StatusOK, gin.H{
-			"code": 200,
-			"msg":  "获取成功",
-			"data": pageResult,
-		})
+		base.RespJsonSuccess(c, "获取成功", pageResult)
 	}
 }
 
@@ -180,31 +144,19 @@ func GetNewMessageApiHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		r := c.Request
 		// 1. 获取URL参数
-		deviceId := r.URL.Query().Get("device_id")
+		deviceId := c.GetString(base.ContextDeviceIdKey)
 		threadId := r.URL.Query().Get("thread_id")
 		lastDate := r.URL.Query().Get("last_date")
-		if deviceId == "" || threadId == "" || lastDate == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": 400,
-				"msg":  "参数错误",
-				"data": nil,
-			})
+		if threadId == "" || lastDate == "" {
+			base.RespJsonBadRequest(c, "参数错误")
 			return
 		}
 		message, err := getNewMessage(deviceId, threadId, lastDate)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code": 500,
-				"msg":  "获取消息失败：" + err.Error(),
-				"data": nil,
-			})
+			base.RespJsonInternalServerError(c, "获取消息失败："+err.Error())
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{
-			"code": 200,
-			"msg":  "获取成功",
-			"data": message,
-		})
+		base.RespJsonSuccess(c, "获取成功", message)
 	}
 }
 
@@ -213,18 +165,14 @@ func GetOldMessagesApiHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		r := c.Request
 		// 获取参数
-		deviceId := r.URL.Query().Get("device_id")
+		deviceId := c.GetString(base.ContextDeviceIdKey)
 		threadId := r.URL.Query().Get("thread_id")
 		offsetStr := r.URL.Query().Get("offset")
 		pageSizeStr := r.URL.Query().Get("page_size")
 
 		// 参数校验
-		if deviceId == "" || threadId == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": 400,
-				"msg":  "设备ID和会话ID不能为空",
-				"data": nil,
-			})
+		if threadId == "" {
+			base.RespJsonBadRequest(c, "参数错误")
 			return
 		}
 
@@ -248,22 +196,14 @@ func GetOldMessagesApiHandler() gin.HandlerFunc {
 		// 查询总条数
 		totalCount, err := getMessageTotalCount(deviceId, threadId)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code": 500,
-				"msg":  "查询消息总数失败：" + err.Error(),
-				"data": nil,
-			})
+			base.RespJsonInternalServerError(c, "查询消息总数失败："+err.Error())
 			return
 		}
 
 		// 查询老消息（按date ASC排序，偏移offset，取pageSize条）
 		messages, err := getOldMessages(deviceId, threadId, offset, pageSize)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code": 500,
-				"msg":  "获取老消息失败：" + err.Error(),
-				"data": nil,
-			})
+			base.RespJsonInternalServerError(c, "获取老消息失败："+err.Error())
 			return
 		}
 
@@ -276,101 +216,53 @@ func GetOldMessagesApiHandler() gin.HandlerFunc {
 		}
 
 		// 返回响应
-		c.JSON(http.StatusOK, gin.H{
-			"code": 200,
-			"msg":  "获取成功",
-			"data": result,
-		})
+		base.RespJsonSuccess(c, "获取成功", result)
 	}
 }
 
 func SendMessage() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req MessageSendReq
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": 400,
-				"msg":  "请求参数错误",
-				"data": err.Error(),
-			})
+		if err := req.ShouldBindJSON(c, &req); err != nil {
+			base.RespJsonBadRequest(c, "请求参数错误")
 			return
 		}
 
 		if !config.Feature.EnableSendSms {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": 400,
-				"msg":  "功能未启用",
-				"data": nil,
-			})
+			base.RespJsonBadRequest(c, "功能未启用")
 			return
 		}
 
-		dbDevice, err := database.FindDeviceById(req.DeviceId)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": 400,
-				"msg":  "设备不存在",
-				"data": nil,
-			})
-		}
+		dbDevice := c.MustGet(base.TypeKey[database.Device]()).(database.Device)
 
-		dev := device.GetDevice(dbDevice.Serial)
-		if dev == nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": 400,
-				"msg":  "设备不存在",
-				"data": nil,
-			})
-			return
-		}
-
+		dev := c.MustGet(base.TypeKey[*adb.Device]()).(*adb.Device)
 		state, er := dev.State()
 		if er != nil || state != adb.StateOnline {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code": 500,
-				"msg":  "设备状态异常",
-				"data": nil,
-			})
+			base.RespJsonInternalServerError(c, "设备状态异常")
 			return
 		}
 		networkTypes, networkTypeErr := shell.GetPropGsmNetworkType(dev)
 		if networkTypeErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code": 500,
-				"msg":  "系统内部错误",
-				"data": nil,
-			})
+			base.RespJsonInternalServerError(c, "系统内部错误")
 			return
 		}
 
 		if req.SubId >= len(networkTypes) {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code": 500,
-				"msg":  "无效的SIM卡",
-				"data": nil,
-			})
+			base.RespJsonInternalServerError(c, "无效的SIM卡")
 			return
 		}
 
 		networkType := networkTypes[req.SubId]
 
 		if len(networkType) == 0 || strings.ToUpper(networkType) == "UNKNOWN" {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code": 500,
-				"msg":  "Sim卡不可用",
-				"data": nil,
-			})
+			base.RespJsonInternalServerError(c, "Sim卡不可用")
 			return
 		}
 
 		res, sendErr := shell.ServiceCallIsmsSendMessage(dev, req.SubId, req.Address, req.Body)
 		if sendErr != nil || !res {
 			log.WarningF("sms Send Message Failed: %s", sendErr.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code": 500,
-				"msg":  "发送失败",
-				"data": nil,
-			})
+			base.RespJsonInternalServerError(c, "发送失败")
 			return
 		}
 
@@ -380,22 +272,14 @@ func SendMessage() gin.HandlerFunc {
 			if err == nil && messages != nil && len(messages) > 0 {
 				for _, message := range messages {
 					if message.Address == req.Address && message.Body == req.Body {
-						c.JSON(http.StatusOK, gin.H{
-							"code": 200,
-							"msg":  "发送成功",
-							"data": message.ThreadId,
-						})
+						base.RespJsonSuccess(c, "发送成功", message.ThreadId)
 						return
 					}
 				}
 			}
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"code": 500,
-			"msg":  "发送失败",
-			"data": nil,
-		})
+		base.RespJsonInternalServerError(c, "发送失败")
 
 	}
 }

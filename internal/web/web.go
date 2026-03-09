@@ -10,6 +10,7 @@ import (
 	"adb-backup/internal/route/sms"
 	smsApi "adb-backup/internal/sms"
 	"adb-backup/internal/utils"
+	"adb-backup/internal/web/validator"
 	tmpl "adb-backup/templates"
 	"html/template"
 
@@ -45,6 +46,8 @@ func InitWeb() {
 	})
 	r.HTMLRender = tmpl.GetHTMLRender(r.FuncMap, render.Delims{Left: "{{", Right: "}}"})
 
+	validator.RegisterValidation()
+
 	r.GET("/login", login.NotAuthMiddleware(), auth.LoginPage())
 	r.POST("/api/login", login.Login())
 	r.POST("/api/logout", login.LoginOut())
@@ -53,12 +56,14 @@ func InitWeb() {
 
 	group.GET("/", device.DevicesInfo())
 	group.GET("/api/device/refreshScan", deviceApi.RefreshScanDevice())
-	group.GET("/sms", sms.SmsPage())
-	group.GET("/api/sms/conversations", smsApi.GetConversationsApiHandler())
-	group.GET("/api/sms/messages/latest", smsApi.GetLatestMessagesApiHandler())
-	group.GET("/api/sms/messages/old", smsApi.GetOldMessagesApiHandler())
-	group.GET("/api/sms/messages/new", smsApi.GetNewMessageApiHandler())
-	group.POST("/api/sms/send", smsApi.SendMessage())
+	deviceIdGroup := group.Group("/", validator.DeviceIdMiddleware())
+	deviceIdGroup.GET("/sms", sms.SmsPage())
+	deviceIdGroup.GET("/api/sms/conversations", smsApi.GetConversationsApiHandler())
+	deviceIdGroup.GET("/api/sms/messages/latest", smsApi.GetLatestMessagesApiHandler())
+	deviceIdGroup.GET("/api/sms/messages/old", smsApi.GetOldMessagesApiHandler())
+	deviceIdGroup.GET("/api/sms/messages/new", smsApi.GetNewMessageApiHandler())
+
+	r.POST("/api/sms/send", smsApi.SendMessage())
 
 	port := config.Web.WebPort
 	logWebUrl(port)

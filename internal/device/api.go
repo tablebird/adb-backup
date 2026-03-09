@@ -1,7 +1,7 @@
 package device
 
 import (
-	"net/http"
+	"adb-backup/internal/web/base"
 
 	"github.com/gin-gonic/gin"
 )
@@ -9,10 +9,6 @@ import (
 func RefreshScanDevice() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		checkAndSyncDevices()
-		c.JSON(http.StatusOK, gin.H{
-			"code": 200,
-			"msg":  "刷新成功",
-			"data": nil,
-		})
+		base.RespJsonSuccess(c, "刷新成功", nil)
 	}
 }
