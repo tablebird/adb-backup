@@ -126,11 +126,17 @@ func initDevice(phone ConnectDevice, deviceInfo *adb.DeviceInfo) {
 		return
 	}
 	sync := phone.GetSync()
-	if sync == nil || sync.StartSync() != nil {
-		log.WarningF("启动同步任务失败: %v", err)
-		return
-	}
-	log.SuccessF("检测到新的设备 %s，已经开始同步", phone.Id())
+	go func() {
+		if sync == nil {
+			log.Warning("设备未初始化")
+			return
+		}
+		if err := sync.StartSync(); err != nil {
+			log.WarningF("启动同步任务失败: %v", err)
+			return
+		}
+		log.SuccessF("检测到新的设备 %s，已经开始同步", phone.Id())
+	}()
 }
 
 func initClient() *adb.Adb {
