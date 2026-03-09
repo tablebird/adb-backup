@@ -13,6 +13,8 @@ If a notification address is configured, a POST request will be sent to the noti
 ## Build/Run
 
 ```go
+cp example.env .env
+
 go mod download
 // build
 // go build
