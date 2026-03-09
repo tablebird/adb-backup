@@ -8,6 +8,8 @@ import (
 
 var (
 	ContextDeviceIdKey = "deviceId"
+
+	ContextDeviceKey = "device"
 )
 
 func TypeKey[T any]() any {

@@ -2,9 +2,7 @@ package sms
 
 import (
 	"adb-backup/internal/config"
-	"adb-backup/internal/database"
 	"adb-backup/internal/device"
-	"adb-backup/internal/shell"
 	"adb-backup/internal/web/base"
 	"net/http"
 	"strings"
@@ -18,24 +16,27 @@ func SmsPage() gin.HandlerFunc {
 		h := gin.H{
 			"DeviceID": deviceId,
 		}
-		dbDevice := c.MustGet(base.TypeKey[database.Device]()).(database.Device)
+		dev := c.MustGet(base.ContextDeviceKey).(device.Device)
 
-		h["DeviceName"] = dbDevice.BuildName()
+		h["DeviceName"] = dev.Name()
 		if config.Feature.EnableSendSms {
-			adbDevice := device.GetDevice(dbDevice.Serial)
-			if adbDevice != nil {
-				networkTypes, err := shell.GetPropGsmNetworkType(adbDevice)
-				if err == nil {
-					h["NetworkTypes"] = networkTypes
-					var enableSendSms bool
-					for _, networkType := range networkTypes {
-						if networkType != "" && strings.ToUpper(networkType) != "UNKNOWN" {
-							enableSendSms = true
-							break
+			if dev, ok := dev.(device.ConnectDevice); ok {
+				telephony := dev.GetTelephony()
+				if telephony != nil {
+					networkTypes, err := telephony.GetNetworkType()
+					if err == nil {
+						h["NetworkTypes"] = networkTypes
+						var enableSendSms bool
+						for _, networkType := range networkTypes {
+							if networkType != "" && strings.ToUpper(networkType) != "UNKNOWN" {
+								enableSendSms = true
+								break
+							}
 						}
+						h["EnableSendSms"] = enableSendSms
 					}
-					h["EnableSendSms"] = enableSendSms
 				}
+
 			}
 		}
 		c.HTML(http.StatusOK, "sms_detail", h)

@@ -55,7 +55,7 @@ func TestParseBatteryPoweredType(t *testing.T) {
 `
 	powereds := _parseBatteryPoweredType(res)
 	assert.Equal(t, len(powereds), 1)
-	assert.Equal(t, powereds[0], BatteryPoweredTypeUSB)
+	assert.Equal(t, powereds[0], "USB")
 }
 
 func TestParseBatteryPoweredTypeAll(t *testing.T) {
@@ -66,10 +66,7 @@ func TestParseBatteryPoweredTypeAll(t *testing.T) {
 `
 	powereds := _parseBatteryPoweredType(res)
 	assert.Equal(t, len(powereds), 3)
-	assert.Equal(t, powereds[0], BatteryPoweredTypeAC)
-	assert.Equal(t, powereds[0].String(), "AC")
-	assert.Equal(t, powereds[1], BatteryPoweredTypeUSB)
-	assert.Equal(t, powereds[1].String(), "USB")
-	assert.Equal(t, powereds[2], BatteryPoweredTypeWireless)
-	assert.Equal(t, powereds[2].String(), "Wireless")
+	assert.Equal(t, powereds[0], "AC")
+	assert.Equal(t, powereds[1], "USB")
+	assert.Equal(t, powereds[2], "Wireless")
 }

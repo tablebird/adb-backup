@@ -2,16 +2,11 @@ package sms
 
 import (
 	"adb-backup/internal/config"
-	"adb-backup/internal/database"
 	"adb-backup/internal/device"
-	"adb-backup/internal/log"
-	"adb-backup/internal/shell"
 	"adb-backup/internal/web/base"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
-	adb "github.com/zach-klippenstein/goadb"
 )
 
 type ConversationPageResult struct {
@@ -233,52 +228,18 @@ func SendMessage() gin.HandlerFunc {
 			return
 		}
 
-		dbDevice := c.MustGet(base.TypeKey[database.Device]()).(database.Device)
+		dev := c.MustGet(base.ContextDeviceKey).(device.ConnectDevice)
 
-		dev := c.MustGet(base.TypeKey[*adb.Device]()).(*adb.Device)
-		state, er := dev.State()
-		if er != nil || state != adb.StateOnline {
-			base.RespJsonInternalServerError(c, "设备状态异常")
-			return
-		}
-		networkTypes, networkTypeErr := shell.GetPropGsmNetworkType(dev)
-		if networkTypeErr != nil {
-			base.RespJsonInternalServerError(c, "系统内部错误")
-			return
-		}
-
-		if req.SubId >= len(networkTypes) {
-			base.RespJsonInternalServerError(c, "无效的SIM卡")
-			return
-		}
-
-		networkType := networkTypes[req.SubId]
-
-		if len(networkType) == 0 || strings.ToUpper(networkType) == "UNKNOWN" {
-			base.RespJsonInternalServerError(c, "Sim卡不可用")
-			return
-		}
-
-		res, sendErr := shell.ServiceCallIsmsSendMessage(dev, req.SubId, req.Address, req.Body)
-		if sendErr != nil || !res {
-			log.WarningF("sms Send Message Failed: %s", sendErr.Error())
-			base.RespJsonInternalServerError(c, "发送失败")
-			return
-		}
-
-		sync := device.GetSmsSync(dbDevice.Serial)
-		if sync != nil {
-			messages, err := sync.SyncSms()
-			if err == nil && messages != nil && len(messages) > 0 {
-				for _, message := range messages {
-					if message.Address == req.Address && message.Body == req.Body {
-						base.RespJsonSuccess(c, "发送成功", message.ThreadId)
-						return
-					}
-				}
+		isms := dev.GetIsms()
+		if isms != nil {
+			id, err := isms.SendMessage(req.SubId, req.Address, req.Body)
+			if err != nil {
+				base.RespJsonInternalServerError(c, err.Error())
+				return
 			}
+			base.RespJsonSuccess(c, "发送成功", id)
+			return
 		}
-
 		base.RespJsonInternalServerError(c, "发送失败")
 
 	}

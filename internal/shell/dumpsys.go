@@ -72,7 +72,7 @@ func _parseBatteryLevel(res string) (int, error) {
 	return int(0), err
 }
 
-func DumpBatteryPoweredType(d *adb.Device) ([]BatteryPoweredType, error) {
+func DumpBatteryPoweredType(d *adb.Device) ([]string, error) {
 	res, err := DumpSys(d, "battery | grep powered:")
 	if err != nil {
 		return nil, err
@@ -80,8 +80,8 @@ func DumpBatteryPoweredType(d *adb.Device) ([]BatteryPoweredType, error) {
 	return _parseBatteryPoweredType(res), nil
 }
 
-func _parseBatteryPoweredType(res string) []BatteryPoweredType {
-	var powereds []BatteryPoweredType
+func _parseBatteryPoweredType(res string) []string {
+	var powereds []string
 	lines := strings.Split(res, "\n")
 	for _, line := range lines {
 		// 解析 "powered: AC" 格式的输出
@@ -91,10 +91,8 @@ func _parseBatteryPoweredType(res string) []BatteryPoweredType {
 			if value == "true" {
 				key := strings.TrimSpace(parts[0])
 				powerName := strings.ReplaceAll(key, "powered", "")
-				poweredType, err := parseBatteryPoweredType(strings.TrimSpace(powerName))
-				if err == nil {
-					powereds = append(powereds, poweredType)
-				}
+				poweredType := strings.TrimSpace(powerName)
+				powereds = append(powereds, poweredType)
 			}
 		}
 	}

@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"adb-backup/internal/database"
 	"adb-backup/internal/device"
 	"adb-backup/internal/web/base"
 
@@ -14,19 +13,19 @@ func deviceId(fl validator.FieldLevel) bool {
 	return dev != nil
 }
 
-func getDevice(fl validator.FieldLevel) *database.Device {
+func getDevice(fl validator.FieldLevel) device.Device {
 	deviceId, ok := fl.Field().Interface().(string)
 	if ok && deviceId != "" {
-		dbDevice, err := database.FindDeviceById(deviceId)
+		dev, err := device.FindDeviceById(deviceId)
 		if err != nil {
 			return nil
 		}
 		ctx := getContext(fl)
 		if ctx != nil {
-			ctx.Set(base.ContextDeviceIdKey, dbDevice)
-			ctx.SetTypeKey(dbDevice)
+			ctx.Set(base.ContextDeviceIdKey, deviceId)
+			ctx.Set(base.ContextDeviceKey, dev)
 		}
-		return &dbDevice
+		return dev
 	} else {
 		return nil
 	}
@@ -35,14 +34,8 @@ func getDevice(fl validator.FieldLevel) *database.Device {
 func deviceIdConnect(fl validator.FieldLevel) bool {
 	dev := getDevice(fl)
 	if dev != nil {
-		adbDevice := device.GetDevice(dev.Serial)
-		if adbDevice != nil {
-			ctx := getContext(fl)
-			if ctx != nil {
-				ctx.SetTypeKey(adbDevice)
-			}
+		if _, ok := dev.(device.ConnectDevice); ok {
 			return true
-
 		}
 	}
 	return false
@@ -57,13 +50,13 @@ func DeviceIdMiddleware() gin.HandlerFunc {
 			return
 		}
 		c.Set(base.ContextDeviceIdKey, deviceId)
-		dbDevice, err := database.FindDeviceById(deviceId)
+		dev, err := device.FindDeviceById(deviceId)
 		if err != nil {
 			base.RespJsonBadRequest(c, "设备不存在")
 			c.Abort()
 			return
 		}
-		base.SetContextTypeKey(c, dbDevice)
+		c.Set(base.ContextDeviceKey, dev)
 	}
 }
 
@@ -73,15 +66,10 @@ func DeviceIdConnectMiddleware() gin.HandlerFunc {
 		if c.IsAborted() {
 			return
 		}
-		dbDevice := c.MustGet(base.TypeKey[database.Device]()).(database.Device)
-
-		adbDevice := device.GetDevice(dbDevice.Serial)
-
-		if adbDevice == nil {
+		dev := c.MustGet(base.ContextDeviceKey).(device.Device)
+		if _, ok := dev.(device.ConnectDevice); !ok {
 			base.RespJsonBadRequest(c, "设备未连接")
 			c.Abort()
-			return
 		}
-		base.SetContextTypeKey(c, adbDevice)
 	}
 }

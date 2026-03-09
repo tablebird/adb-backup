@@ -37,6 +37,10 @@ func SuccessF(format string, v ...interface{}) {
 	log.Printf(ColorGreen+format+ColorReset, v...)
 }
 
+func Warning(v string) {
+	log.Println(ColorYellow + v + ColorReset)
+}
+
 func WarningF(format string, v ...interface{}) {
 	log.Printf(ColorYellow+format+ColorReset, v...)
 }

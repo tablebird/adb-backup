@@ -8,7 +8,7 @@ import (
 
 func RefreshScanDevice() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		checkAndSyncDevices()
+		scanAllDevices()
 		base.RespJsonSuccess(c, "刷新成功", nil)
 	}
 }

@@ -36,9 +36,13 @@ func FindAllDevices() ([]Device, error) {
 	return devices, err
 }
 
-func FindDevice(serials []string) ([]Device, error) {
+func FindDeviceByNotInId(ids []string) ([]Device, error) {
+	if len(ids) == 0 {
+		return FindAllDevices()
+	}
+
 	var devices []Device
-	err := db.Where("serial IN ?", serials).Find(&devices).Error
+	err := db.Where("id NOT IN ?", ids).Find(&devices).Error
 	return devices, err
 }
 

@@ -7,6 +7,7 @@ import (
 	"adb-backup/internal/notify"
 	"adb-backup/internal/shell"
 	"adb-backup/internal/utils"
+	"sync/atomic"
 
 	sy "sync"
 
@@ -17,12 +18,24 @@ import (
 	adb "github.com/zach-klippenstein/goadb"
 )
 
-type SmsSync struct {
-	DbDevice database.Device
+type SmsSync interface {
+	NowSync[[]database.Sms]
+}
 
-	Device *adb.Device
+func NewSmsSync(dbDevice *database.Device, device *adb.Device, newNotify notify.Interface) SmsSync {
+	return &shellSmsSync{
+		dbDevice:  dbDevice,
+		device:    device,
+		newNotify: newNotify,
+	}
+}
 
-	NewNotify notify.Interface
+type shellSmsSync struct {
+	dbDevice *database.Device
+
+	device *adb.Device
+
+	newNotify notify.Interface
 
 	startSyncDate time.Time
 
@@ -31,11 +44,21 @@ type SmsSync struct {
 	contentQuery shell.ContentQuery
 
 	syncMutex sy.RWMutex
+
+	syncing int32
 }
 
-func (s *SmsSync) StartSync() error {
-	serial := s.DbDevice.Serial
-	deviceId := s.DbDevice.Id
+func (s *shellSmsSync) IsSyncing() bool {
+	return atomic.LoadInt32(&s.syncing) == 1
+}
+
+func (s *shellSmsSync) StartSync() error {
+	serial := s.dbDevice.Serial
+	if !atomic.CompareAndSwapInt32(&s.syncing, 0, 1) {
+		return fmt.Errorf("设备[%s] 已经同步", serial)
+	}
+	defer atomic.StoreInt32(&s.syncing, 0)
+	deviceId := s.dbDevice.Id
 	contentQuery := shell.ContentQuery{
 		Uri:  shell.CONTENT_QUERY_URI_SMS,
 		Sort: "date",
@@ -47,7 +70,7 @@ func (s *SmsSync) StartSync() error {
 	log.DebugF("[%s]历史最新消息时间为：%s", serial, s.smsLastDate)
 
 	for {
-		messages, err := s.SyncSms()
+		messages, err := s.SyncNow()
 		if err != nil {
 			return err
 		}
@@ -59,13 +82,13 @@ func (s *SmsSync) StartSync() error {
 	}
 }
 
-func (s *SmsSync) SyncSms() ([]database.Sms, error) {
+func (s *shellSmsSync) SyncNow() ([]database.Sms, error) {
 	s.syncMutex.Lock()
-	serial := s.DbDevice.Serial
+	serial := s.dbDevice.Serial
 	if !s.smsLastDate.IsZero() {
 		s.contentQuery.Where = fmt.Sprintf("date>%d", s.smsLastDate.UnixMilli())
 	}
-	result, err := s.contentQuery.QueryRow(s.Device)
+	result, err := s.contentQuery.QueryRow(s.device)
 	if err != nil {
 		s.syncMutex.Unlock()
 		return nil, fmt.Errorf("读取短信错误： %w", err)
@@ -76,13 +99,13 @@ func (s *SmsSync) SyncSms() ([]database.Sms, error) {
 		var sms database.Sms
 		utils.MapDecode(shell.ContentQueryParseItem(item), &sms)
 		sms.Uid = uuid.New().String()
-		sms.DeviceId = s.DbDevice.Id
+		sms.DeviceId = s.dbDevice.Id
 		sms.OrgStr = utils.CleanString(item)
 		if sms.Date.Sub(s.smsLastDate) > 0 {
 			smsLastDate = sms.Date
 		}
-		if s.NewNotify != nil && sms.Date.Sub(s.startSyncDate) > 0 {
-			s.NewNotify.NotifySms(sms)
+		if s.newNotify != nil && sms.Date.Sub(s.startSyncDate) > 0 {
+			s.newNotify.NotifySms(sms)
 		}
 		messages = append(messages, sms)
 	}
