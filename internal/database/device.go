@@ -18,6 +18,10 @@ type Device struct {
 	UpdatedAt     time.Time
 }
 
+func (d *Device) TableName() string {
+	return "devices"
+}
+
 func (d *Device) BuildName() string {
 	var name = utils.AppendPrefix(d.MarketingName, d.Manufacturer, " ")
 	if name == "" {

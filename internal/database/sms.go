@@ -22,6 +22,10 @@ type Sms struct {
 	UpdatedAt     time.Time `mapstructure:"-"`
 }
 
+func (s *Sms) TableName() string {
+	return "sms"
+}
+
 func FindLastSms(deviceId string) (Sms, error) {
 	var sms Sms
 	err := db.Where("device_id = ?", deviceId).Order("date DESC").First(&sms).Error
