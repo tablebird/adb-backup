@@ -1,6 +1,6 @@
 package config
 
-import adb "github.com/zach-klippenstein/goadb"
+import adb "github.com/tablebird/goadb"
 
 var Adb = AdbConfig{}
 

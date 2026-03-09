@@ -1,0 +1,16 @@
+{{ define "auth/scriptCheck"}}
+    function checkAuth() {
+        fetch('/api/checkAuth', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        }).then(response => response.json())
+            .then(data => {
+                if (data.code === 401) {
+                    const location = window.location
+                    window.location.href = `/login?redirect=${encodeURIComponent(location.pathname + location.search)}`;
+                }
+            })
+    }
+{{ end }}

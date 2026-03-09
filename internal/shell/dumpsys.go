@@ -96,3 +96,15 @@ func _parseBatteryPoweredType(res string) []string {
 	}
 	return powereds
 }
+
+func DumpDisplayState(s Shell) (bool, error) {
+	res, err := DumpSys(s, "display | grep mState=")
+	if err != nil {
+		return false, err
+	}
+	res = strings.TrimSpace(res)
+	if res == "mState=ON" {
+		return true, nil
+	}
+	return false, nil
+}

@@ -1,4 +1,4 @@
-package device
+package power
 
 import (
 	"adb-backup/internal/log"
@@ -8,6 +8,10 @@ import (
 type PowerManager interface {
 	BatteryLevel() int
 	CharingType() []BatteryPoweredType
+}
+
+func NewPowerManager(s shell.Shell) PowerManager {
+	return &shellPower{s: s}
 }
 
 type shellPower struct {

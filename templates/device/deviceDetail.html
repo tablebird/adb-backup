@@ -1,0 +1,429 @@
+{{ define "deviceDetail" }}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备详情</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    {{ template "tailwind/config" }}
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .deviceScreen {
+                width: 80%;
+                max-width: 400px;
+                border: 2px solid #555;
+                position: relative;
+                aspect-ratio: {{ .Width }} / {{ .Height }};
+            }
+            .player {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+            }
+            .operation-button {
+                @apply p-2 rounded-full hover:bg-gray-100 dark:hover:bg-cardSecondary transition-colors;
+            }
+            .non-selectable-transparent {
+                pointer-events: none;
+                user-select: none;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+            }
+            .input-capture {
+                z-index: 100;
+                opacity: 0;
+                contenteditable: true;
+                caret-color: transparent;
+                user-select: none; 
+                -webkit-user-select: none;
+                cursor: default;
+            }
+            .input-capture:focus { 
+                user-select: text;
+            }
+        }
+    </style>
+    <style>
+    </style>
+    <!-- 引入轻量版 jmuxer -->
+    <script src="https://cdn.jsdelivr.net/npm/jmuxer@2.0.2/dist/jmuxer.min.js"></script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 font-inter text-gray-800 dark:text-gray-200 h-screen flex flex-col overflow-hidden">
+    <!-- 顶部导航 -->
+    <header class="bg-white dark:bg-card shadow-sm sticky top-0 z-10">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <a href="/" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-cardSecondary transition-colors" id="globalBackBtn">
+                    <i class="fa fa-arrow-left text-primary"></i>
+                </a>
+                <div>
+                    <h1 class="text-lg font-bold" id="headerTitle">设备详情</h1>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ .DeviceName }}</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                {{ template "themeToggle/button" }}
+                {{ template "logout/button" }}
+            </div>
+        </div>
+    </header>
+    <main class="container mx-auto px-4 py-8">
+        <div class="flex flex-col items-center justify-between"> 
+            <div class="flex">
+                <button class="operation-button" onclick="onAction('p')">
+                    <i class="fa fa-power-off" aria-hidden="true"></i>
+                </button>
+                <button class="operation-button" onclick="onKeyEvent(24)">
+                    <i class="fa fa-volume-up" aria-hidden="true"></i>
+                </button>
+                <button class="operation-button" onclick="onKeyEvent(25)">
+                    <i class="fa fa-volume-down" aria-hidden="true"></i>
+                </button>
+                <span class="border-l border-gray-300 dark:border-gray-600 h-6 mx-2 self-center"></span>
+                <button class="operation-button" onclick="onKeyEvent(4)">
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                </button>
+                <button class="operation-button" onclick="onKeyEvent(3)">
+                    <i class="fa fa-circle-thin" aria-hidden="true"></i>
+                </button>
+                <button class="operation-button" onclick="onKeyEvent(187)">
+                    <i class="fa fa-square-o" aria-hidden="true"></i>
+                </button>
+
+            </div>
+            <div id="phone-screen" class="deviceScreen"> 
+                <video id="player" class="player" autoplay muted playsinline></video>
+                <img id="phone-screen-img" class="player non-selectable-transparent" style="display: none;">
+                <div id="input-capture" class="player input-capture" contenteditable=true tabindex="0"></div>
+            </div>
+        </div>
+    </main>
+
+    {{ template "toast/div" . }}
+
+    <script>
+        {{ template "toast/script" . }}
+
+        {{ template "themeToggle/script" . }}
+
+        {{ template "logout/script" }}
+
+        {{ template "auth/scriptCheck" }}
+
+
+        const phoneWidth = "{{ .Width }}"
+        const phoneHeight = "{{ .Height }}"
+        const touchDevice = "{{ .TouchDevice }}"
+        const touchWidth = "{{ .TouchWidth }}"
+        const touchHeight = "{{ .TouchHeight }}"
+        let displayState = "{{ .DisplayState}}"
+        let deviceId = "{{ .DeviceId }}"
+        let jmuxer = null;
+        let stop = false;
+        let abortController = null;
+        player = document.getElementById("player")
+        let phoneScreenImg = document.getElementById("phone-screen-img")
+
+        // 初始化 jmuxer 播放器
+        function initPlayer() {
+            jmuxer = new JMuxer({
+                node: player, // 渲染到 canvas 元素
+                mode: 'video',  // 仅播放视频（如需音频可加 audio 模式）
+                flushingTime: 0, // 关闭缓冲，降低延迟
+                maxDelay: 0.1,
+                clearBuffer: true,
+                onError: (err) => {
+                    console.error('播放器错误:', err);
+                    showToast('播放出错：' + err.message);
+                }
+            });
+            if (displayState) {
+                startStream();
+            }
+        }
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopStream();
+            } else {
+                initPlayer()
+            }
+        });
+
+        // 开始获取并播放流
+        function startStream() {
+            stop = false;
+            abortController = new AbortController();
+            const signal = abortController.signal;
+            // 用 Fetch API 流式获取 H.264 数据
+            fetch(`/api/screen?device_id=${deviceId}`, {
+                signal: signal
+            })
+                .then(async response => {
+                    if (!response.ok) {
+                        json = await response.json()
+                        throw new Error(json && json.msg);
+                    }
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder(); // 二进制解码
+
+                    // 循环读取流数据
+                    function readStream() {
+                        reader.read().then(({ done, value }) => {
+                            if (done) {
+                                console.log('流已结束');
+                                return;
+                            }
+                            if (stop) {
+                                reader.cancel();
+                                return;
+                            }
+                            // 将二进制数据传给 jmuxer 解析
+                            jmuxer.feed({
+                                video: value // 纯 H.264 裸流数据
+                            });
+                            if (player.currentTime > 0) {
+                                phoneScreenImg.style.display = "none"
+                                phoneScreenImg.src = ""
+                            } else {
+                                phoneScreenImg.style.display = "block"
+                                phoneScreenImg.src = `/api/screenCap?device_id=${deviceId}`
+                            }
+                            readStream(); // 继续读取下一块
+                        }).catch(err => {
+                            console.error('读取流失败:', err);
+                            showToast('获取流失败:' + err)
+                        });
+                    }
+                    readStream();
+                })
+                .catch(err => {
+                    console.error('获取流失败:', err);
+                    showToast('获取流失败:' + err)
+                });
+        }
+
+        // 停止播放
+        function stopStream() {
+            if (jmuxer) {
+                jmuxer.destroy(); // 销毁播放器
+                jmuxer = null;
+            }
+            stop = true;
+
+            if (abortController) {
+                abortController.abort();
+                abortController = null;
+            }
+        }
+
+        {{ template "socket/script" }}
+
+        function onAction(action) {
+            sendWebSocketMessage(JSON.stringify({
+                "a": action,
+                "d": deviceId
+            }))
+        }
+
+        function onText(text) {
+            sendWebSocketMessage(JSON.stringify({
+                "a": "t",
+                "d": deviceId,
+                "t": text
+            }))
+        }
+
+        function onKeyEvent(keyCode) {
+            sendWebSocketMessage(JSON.stringify({
+                "a": "ke",
+                "d": deviceId,
+                "kc": keyCode
+            }))
+        }
+        class TouchEventQueue {
+            constructor() {
+                this.queue = [];
+                this.isProcessing = false;
+            }
+            
+            async addEvent(event) {
+                this.queue.push(event);
+                if (!this.isProcessing) {
+                    this.processQueue();
+                }
+            }
+            
+            async processQueue() {
+                this.isProcessing = true;
+                
+                while (this.queue.length > 0) {
+                    const event = this.queue.shift();
+                    
+                    // 发送事件
+                    sendWebSocketMessage(JSON.stringify({
+                        "a": "m",
+                        "d": deviceId,
+                        "t": event.type,
+                        "p": event.params
+                    }));
+                }
+                
+                this.isProcessing = false;
+            }
+        }
+
+        const touchQueue = new TouchEventQueue();
+
+        function sendMouse(type, params) {
+            touchQueue.addEvent({
+                type: type,
+                params: params
+            });
+        }
+
+        function convertToPhoneCoord(webX, webY) {
+            const rect = screen.getBoundingClientRect();
+            // 计算相对容器的坐标比例
+            const ratioX = (webX - rect.left) / rect.width;
+            const ratioY = (webY - rect.top) / rect.height;
+            // 转换为手机真实坐标
+            const phoneX = Math.floor(ratioX * touchWidth);
+            const phoneY = Math.floor(ratioY * touchHeight);
+            return { x: phoneX, y: phoneY };
+        }
+        let downX = -1;
+        let downY = -1;
+
+        let touchId = 0; // 触摸点ID
+        // 优化触摸移动处理，平滑插值
+        let touchPoints = [];
+        let touchMoveTimer = null;
+        let downTime = 0;
+        screen = document.getElementById('input-capture')
+        // 4. 监听鼠标按下事件（模拟手指按下）
+        screen.addEventListener('mousedown', (e) => {
+            const { x, y } = convertToPhoneCoord(e.clientX, e.clientY);
+            downX = x;
+            downY = y;
+            // 清空之前的点
+            touchPoints = [];
+            downTime = Date.now();
+            // 发送按下事件（对应sendevent的按下指令）
+            sendMouse(1, { i : touchId, x, y });
+        });
+
+        // 5. 监听鼠标移动事件（模拟手指滑动）
+        screen.addEventListener('mousemove', (e) => {
+            if (e.buttons !== 1) return; // 仅当鼠标左键按下时触发
+            const { x, y } = convertToPhoneCoord(e.clientX, e.clientY);
+            if (downX === x && downY === y) {
+                return;
+            }
+            // 添加到点队列
+            touchPoints.push({ x, y });
+            
+            // 清除之前的定时器
+            if (touchMoveTimer) {
+                clearTimeout(touchMoveTimer);
+            }
+            
+            // 使用节流，每10ms发送一次移动事件
+            touchMoveTimer = setTimeout(() => {
+                if (touchPoints.length > 0) {
+                    // 发送最后一个点（最新的位置）
+                    const lastPoint = touchPoints[touchPoints.length - 1];
+                    sendMouse(2, { i: touchId, x: lastPoint.x, y: lastPoint.y });
+                    touchPoints = []; // 清空队列
+                }
+            }, 10); // 10ms 节流
+        });
+
+        // 6. 监听鼠标松开事件（模拟手指松开）
+        screen.addEventListener('mouseup', (e) => {
+            const { x, y } = convertToPhoneCoord(e.clientX, e.clientY);
+            downX = -1;
+            downY = -1;
+            // 清空队列
+            if (touchMoveTimer) {
+                clearTimeout(touchMoveTimer);
+            }
+            touchPoints = [];
+            time = Date.now();
+            // 发送松开事件（对应sendevent的松开指令）
+            sendMouse(3, { i: touchId, x, y, d: time - downTime });
+        });
+        screen.addEventListener('click', () => {
+            screen.focus();
+            // 可选：聚焦后清空初始提示文本
+            screen.innerText = '';
+            console.log('✅ 屏幕操控区域已聚焦，可：\n1. 电脑输入法输入中文/英文\n2. 按Backspace/Enter等功能键');
+        });
+        let isComposing = false; // 输入法状态标志
+
+        // 开始输入法输入（如中文输入法打字）
+        screen.addEventListener('compositionstart', (e) => {
+            isComposing = true;
+        });
+
+        // 输入法输入结束（确认输入）
+        screen.addEventListener('compositionend', async (e) => {
+            isComposing = false;
+            const inputText = e.data; // 获取最终输入的文本
+            // 这里可以发送中文输入到设备
+            if (inputText) {
+                onText(inputText)
+            }
+        });
+        screen.addEventListener('keydown', async (e) => { 
+             if (isComposing) {
+                // 正在使用输入法，不处理 input 事件
+                return;
+            }
+            e.preventDefault();
+            const { key, keyCode, ctrlKey,  shiftKey } = e;
+
+            let keys = [];
+            if (shiftKey) {
+                keys.push(59);
+            }
+            if (ctrlKey) {
+                keys.push(113);
+            }
+            if (keyCode === 8 || key === 'Backspace') {
+                // 1. 处理：删除键（Backspace）
+                onKeyEvent([...keys, 67])
+            } else if (keyCode === 13 || key === 'Enter') {
+                // 2. 处理：回车键（Enter）
+                onKeyEvent([...keys, 66])
+            } else if (keyCode === 9 || key === 'Tab') {
+                onKeyEvent([...keys, 61])
+            } else if (!shiftKey && keyCode >= 65 && keyCode <= 90) {
+                onKeyEvent([...keys, keyCode - 36])
+            } else if (!!shiftKey && keyCode >= 49 && keyCode <= 57) {
+                onKeyEvent([...keys, keyCode - 42])
+            } else if (key === 'ArrowUp') {
+                onKeyEvent([...keys, 19])
+            } else if (key === 'ArrowDown') {
+                onKeyEvent([...keys, 20])
+            } else if (key === 'ArrowLeft') {
+                onKeyEvent([...keys, 21])
+            } else if (key === 'ArrowRight') {
+               onKeyEvent([...keys, 22])
+            } else if (key.length === 1) {
+                onText(key)
+            }
+        });
+
+        // 页面加载完成初始化播放器
+        window.onload = initPlayer;
+    </script>
+</body>
+</html>
+{{ end }}

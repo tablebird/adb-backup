@@ -6,7 +6,7 @@ import (
 	"adb-backup/internal/log"
 	"sync"
 
-	adb "github.com/zach-klippenstein/goadb"
+	adb "github.com/tablebird/goadb"
 
 	"time"
 )

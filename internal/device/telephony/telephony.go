@@ -1,4 +1,4 @@
-package device
+package telephony
 
 import (
 	"adb-backup/internal/shell"
@@ -14,6 +14,10 @@ type TelephonyManager interface {
 	GetNetworkTypeVisualName() ([]string, error)
 	GetOperatorAlpha() ([]string, error)
 	GetOperatorNumeric() ([]string, error)
+}
+
+func NewTelephonyManager(s shell.Shell) TelephonyManager {
+	return &shellTelephony{s: s}
 }
 
 type shellTelephony struct {

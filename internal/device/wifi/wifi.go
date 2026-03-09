@@ -1,4 +1,4 @@
-package device
+package wifi
 
 import (
 	"adb-backup/internal/shell"
@@ -8,6 +8,10 @@ type WifiManager interface {
 	IsEnabled() bool
 
 	WifiSSid() (ssid string, connect bool)
+}
+
+func NewWifiManager(s shell.Shell) WifiManager {
+	return &shellWifi{s: s}
 }
 
 type shellWifi struct {

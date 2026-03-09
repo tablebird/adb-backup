@@ -1,4 +1,4 @@
-package device
+package isms
 
 import (
 	"adb-backup/internal/shell"
@@ -7,8 +7,15 @@ import (
 	"strings"
 )
 
-type Isms interface {
+type IsmsManager interface {
 	SendMessage(subId int, address string, body string) (string, error)
+}
+
+func NewIsmsManager(s shell.Shell, smsSync sync.SmsSync) IsmsManager {
+	return &shellIsms{
+		s:       s,
+		smsSync: smsSync,
+	}
 }
 
 type shellIsms struct {
@@ -60,5 +67,4 @@ func (i *shellIsms) SendMessage(subId int, address string, body string) (id stri
 	}
 	resErr = errors.New("发送结果未知")
 	return
-
 }

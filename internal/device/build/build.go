@@ -1,4 +1,4 @@
-package device
+package build
 
 import (
 	"adb-backup/internal/shell"
@@ -6,6 +6,10 @@ import (
 
 type Build interface {
 	VersionRelease() int
+}
+
+func NewBuild(s shell.Shell) Build {
+	return &shellBuild{s: s}
 }
 
 type shellBuild struct {

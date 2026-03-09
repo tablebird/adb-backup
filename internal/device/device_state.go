@@ -1,6 +1,6 @@
 package device
 
-import adb "github.com/zach-klippenstein/goadb"
+import adb "github.com/tablebird/goadb"
 
 type DeviceState int8
 

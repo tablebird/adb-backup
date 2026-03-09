@@ -29,6 +29,10 @@ func Debug(v ...interface{}) {
 	}
 }
 
+func Info(format string) {
+	log.Println(format)
+}
+
 func InfoF(format string, v ...interface{}) {
 	log.Printf(format+"\n", v...)
 }

@@ -2,13 +2,21 @@ package device
 
 import (
 	"adb-backup/internal/database"
-	"adb-backup/internal/log"
+	"adb-backup/internal/device/build"
+	"adb-backup/internal/device/display"
+	"adb-backup/internal/device/input"
+	"adb-backup/internal/device/isms"
+	"adb-backup/internal/device/power"
+	"adb-backup/internal/device/screen"
+	"adb-backup/internal/device/telephony"
+	"adb-backup/internal/device/touch"
+	"adb-backup/internal/device/wifi"
 	"adb-backup/internal/notify"
 	"adb-backup/internal/shell"
 	"adb-backup/internal/sync"
 	"fmt"
 
-	adb "github.com/zach-klippenstein/goadb"
+	adb "github.com/tablebird/goadb"
 )
 
 type Device interface {
@@ -26,15 +34,23 @@ type ConnectDevice interface {
 
 	GetSync() sync.Sync
 
-	GetTelephony() TelephonyManager
+	GetTelephony() telephony.TelephonyManager
 
-	GetWifi() WifiManager
+	GetWifi() wifi.WifiManager
 
-	GetPower() PowerManager
+	GetPower() power.PowerManager
 
-	GetBuild() Build
+	GetBuild() build.Build
 
-	GetIsms() Isms
+	GetIsms() isms.IsmsManager
+
+	GetDisplay() display.DisplayManager
+
+	GetTouch() touch.TouchManager
+
+	GetScreen() screen.ScreenManager
+
+	GetInput() input.InputManager
 }
 
 func newDbDevice(device database.Device) Device {
@@ -42,9 +58,11 @@ func newDbDevice(device database.Device) Device {
 }
 
 func newConnectDevice(deviceInfo *adb.DeviceInfo, adbDevice *adb.Device) ConnectDevice {
+	s := shell.NewShell(client, deviceInfo.Serial)
 	return &shellConnectDevice{
 		deviceInfo: deviceInfo,
-		adbDevice:  adbDevice}
+		adbDevice:  adbDevice,
+		shell:      s}
 }
 
 type dbDevice struct {
@@ -70,7 +88,13 @@ type shellConnectDevice struct {
 
 	adbDevice *adb.Device
 
+	shell shell.AnyShell
+
 	sync sync.Sync
+
+	touch touch.TouchManager
+
+	screen screen.ScreenManager
 }
 
 func (p *shellConnectDevice) Id() string {
@@ -95,39 +119,72 @@ func (p *shellConnectDevice) State() DeviceState {
 	return deviceStateToStr(state)
 }
 
-func (p *shellConnectDevice) GetTelephony() TelephonyManager {
+func (p *shellConnectDevice) GetTelephony() telephony.TelephonyManager {
 	if p.State() != StateOnline {
 		return nil
 	}
-	return &shellTelephony{s: p.adbDevice}
+	return telephony.NewTelephonyManager(p.shell)
 }
 
-func (p *shellConnectDevice) GetWifi() WifiManager {
+func (p *shellConnectDevice) GetWifi() wifi.WifiManager {
 	if p.State() != StateOnline {
 		return nil
 	}
-	return &shellWifi{s: p.adbDevice}
+	return wifi.NewWifiManager(p.shell)
 }
 
-func (p *shellConnectDevice) GetPower() PowerManager {
+func (p *shellConnectDevice) GetPower() power.PowerManager {
 	if p.State() != StateOnline {
 		return nil
 	}
-	return &shellPower{s: p.adbDevice}
+	return power.NewPowerManager(p.shell)
 }
 
-func (p *shellConnectDevice) GetBuild() Build {
+func (p *shellConnectDevice) GetBuild() build.Build {
 	if p.State() != StateOnline {
 		return nil
 	}
-	return &shellBuild{s: p.adbDevice}
+	return build.NewBuild(p.shell)
 }
 
-func (p *shellConnectDevice) GetIsms() Isms {
+func (p *shellConnectDevice) GetIsms() isms.IsmsManager {
 	if p.State() != StateOnline {
 		return nil
 	}
-	return &shellIsms{s: p.adbDevice, smsSync: p.sync.(sync.SmsSync)}
+	return isms.NewIsmsManager(p.shell, p.sync.(sync.SmsSync))
+}
+
+func (p *shellConnectDevice) GetDisplay() display.DisplayManager {
+	if p.State() != StateOnline {
+		return nil
+	}
+	return display.NewDisplayManager(p.shell)
+}
+
+func (p *shellConnectDevice) GetTouch() touch.TouchManager {
+	if p.State() != StateOnline {
+		return nil
+	}
+	if p.touch == nil {
+		p.touch = touch.NewTouchManager(p.shell)
+	}
+	return p.touch
+}
+
+func (p *shellConnectDevice) GetScreen() screen.ScreenManager {
+	if p.State() != StateOnline {
+		return nil
+	}
+	p.screen = screen.NewScreenManager(p.shell)
+	return p.screen
+}
+
+func (p *shellConnectDevice) GetInput() input.InputManager {
+	if p.State() != StateOnline {
+		return nil
+	}
+
+	return input.NewInputManager(p.shell)
 }
 
 func (p *shellConnectDevice) initDeviceDB() error {
@@ -140,9 +197,9 @@ func (p *shellConnectDevice) initDeviceDB() error {
 	if state != StateOnline {
 		return fmt.Errorf("设备 %s 状态为 %s，跳过", p.deviceInfo.Serial, state)
 	}
-	androidId, aErr := shell.SettingsGetAndroidId(p.adbDevice)
+	androidId, aErr := shell.SettingsGetAndroidId(p.shell)
 	if aErr != nil || androidId == "" {
-		return fmt.Errorf("设备 %s 无法获取androidId", p.deviceInfo.Serial)
+		return fmt.Errorf("设备 %s 无法获取androidId %s", p.deviceInfo.Serial, aErr.Error())
 	}
 
 	// 序列号重复导致的设备不匹配
@@ -167,8 +224,8 @@ func (p *shellConnectDevice) initDeviceDB() error {
 
 	if device.Id == "" {
 		// 创建新设备
-		manufacturer, _ := shell.GetPropProductManufacturer(p.adbDevice)
-		marketingName, _ := shell.GetMarketingName(p.adbDevice)
+		manufacturer, _ := shell.GetPropProductManufacturer(p.shell)
+		marketingName, _ := shell.GetMarketingName(p.shell)
 		device = database.Device{
 			Id:            androidId,
 			Serial:        p.deviceInfo.Serial,
@@ -186,13 +243,13 @@ func (p *shellConnectDevice) initDeviceDB() error {
 	} else {
 		var change = false
 		if device.Manufacturer == "" {
-			manufacturer, _ := shell.GetPropProductManufacturer(p.adbDevice)
+			manufacturer, _ := shell.GetPropProductManufacturer(p.shell)
 			device.Manufacturer = manufacturer
 			change = true
 		}
 		if device.MarketingName == "" {
 			change = true
-			marketingName, _ := shell.GetMarketingName(p.adbDevice)
+			marketingName, _ := shell.GetMarketingName(p.shell)
 			device.MarketingName = marketingName
 		}
 		if change {
@@ -200,25 +257,6 @@ func (p *shellConnectDevice) initDeviceDB() error {
 		}
 	}
 	p.deviceDB = &device
-	return nil
-}
-
-func (p *shellConnectDevice) startSync() error {
-	if p.deviceDB == nil {
-		return fmt.Errorf("设备未保存，无法同步")
-	}
-	if p.sync != nil {
-		return nil
-	}
-	p.sync = sync.NewSmsSync(p.deviceDB, p.adbDevice, notify.Notify)
-	go func() {
-		defer func() {
-			p.sync = nil
-		}()
-		if err := p.sync.StartSync(); err != nil {
-			log.ErrorF("设备[%s] 同步失败: %v", p.deviceDB.Serial, err)
-		}
-	}()
 	return nil
 }
 
@@ -232,6 +270,6 @@ func (p *shellConnectDevice) GetSync() sync.Sync {
 	if p.State() != StateOnline {
 		return nil
 	}
-	p.sync = sync.NewSmsSync(p.deviceDB, p.adbDevice, notify.Notify)
+	p.sync = sync.NewSmsSync(p.deviceDB, p.shell, notify.Notify)
 	return p.sync
 }

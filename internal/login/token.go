@@ -1,10 +1,12 @@
 package login
 
 import (
+	"adb-backup/internal/web/base"
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -51,13 +53,26 @@ func getLoginUrl(c *gin.Context) string {
 }
 
 func AuthMiddleware() gin.HandlerFunc {
+	return authMiddleware(func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if strings.HasPrefix(path, "/api") {
+			base.RespJson(c, http.StatusUnauthorized, "请先登录", nil)
+		} else if "/ws" == path {
+			c.String(http.StatusUnauthorized, "Unauthorized: Please login first")
+		} else {
+			c.Redirect(http.StatusFound, getLoginUrl(c))
+		}
+	})
+}
+
+func authMiddleware(failFunc func(*gin.Context)) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查Cookie中的登录态
 		token, err := c.Cookie("login_token")
 		if err != nil || token == "" {
 
 			// 未登录，跳转到登录页
-			c.Redirect(http.StatusFound, getLoginUrl(c))
+			failFunc(c)
 			c.Abort()
 			return
 		}
@@ -67,7 +82,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 			// token无效，清除Cookie并跳转登录
 			c.SetCookie("login_token", "", -1, "/", "", false, true)
-			c.Redirect(http.StatusFound, getLoginUrl(c))
+			failFunc(c)
 			c.Abort()
 			return
 		}

@@ -46,3 +46,9 @@ func LoginOut() gin.HandlerFunc {
 		base.RespJsonSuccess(c, "登出成功", nil)
 	})
 }
+
+func CheckLogin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		base.RespJsonSuccess(c, "", nil)
+	}
+}

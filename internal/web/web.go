@@ -8,7 +8,9 @@ import (
 	"adb-backup/internal/route/auth"
 	"adb-backup/internal/route/device"
 	"adb-backup/internal/route/sms"
+	"adb-backup/internal/screen"
 	smsApi "adb-backup/internal/sms"
+	"adb-backup/internal/socket"
 	"adb-backup/internal/utils"
 	"adb-backup/internal/web/validator"
 	tmpl "adb-backup/templates"
@@ -51,10 +53,11 @@ func InitWeb() {
 	r.GET("/login", login.NotAuthMiddleware(), auth.LoginPage())
 	r.POST("/api/login", login.Login())
 	r.POST("/api/logout", login.LoginOut())
-
 	group := r.Group("/", login.AuthMiddleware())
+	group.GET("/api/checkAuth", login.CheckLogin())
 
 	group.GET("/", device.DevicesInfo())
+	group.GET("/ws", socket.Socket)
 	group.GET("/api/device/refreshScan", deviceApi.RefreshScanDevice())
 	deviceIdGroup := group.Group("/", validator.DeviceIdMiddleware())
 	deviceIdGroup.GET("/sms", sms.SmsPage())
@@ -62,6 +65,11 @@ func InitWeb() {
 	deviceIdGroup.GET("/api/sms/messages/latest", smsApi.GetLatestMessagesApiHandler())
 	deviceIdGroup.GET("/api/sms/messages/old", smsApi.GetOldMessagesApiHandler())
 	deviceIdGroup.GET("/api/sms/messages/new", smsApi.GetNewMessageApiHandler())
+
+	deviceConnectGroup := group.Group("/", validator.DeviceIdConnectMiddleware())
+	deviceConnectGroup.GET("/device", device.DeviceDetail)
+	deviceConnectGroup.GET("/api/screen", screen.ScreenView())
+	deviceConnectGroup.GET("/api/screenCap", screen.ScreenCap())
 
 	r.POST("/api/sms/send", smsApi.SendMessage())
 

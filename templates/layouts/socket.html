@@ -1,0 +1,70 @@
+{{ define "socket/script" }}
+
+let webSocket = null;
+let pingInterval = null;
+
+function getWebSocketUrl(path = '/ws') {
+    // 获取当前页面的协议
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // 获取当前页面的主机（域名+端口），例如 "localhost:8080" 或 "www.example.com"
+    const host = window.location.host;
+    // 拼接完整的WebSocket地址
+    return `${protocol}//${host}${path}`;
+}
+
+function initWebSocket() {
+    // 动态生成ws地址，路径可以根据你的接口调整（比如你的Gin接口是/ws）
+    const wsUrl = getWebSocketUrl('/ws');
+    console.log('WebSocket连接地址:', wsUrl); // 调试用，比如输出 ws://localhost:8080/ws
+
+    // 创建WebSocket连接
+    const ws = new WebSocket(wsUrl);
+    webSocket = ws
+    // ws.binaryType = 'arraybuffer'; // 适配H264二进制流
+
+    // 连接成功回调
+    ws.onopen = function() {
+        console.log('WebSocket连接已建立');
+        // 可选：发送心跳包
+        pingInterval =setInterval(() => {
+            console.log('发送心跳包');
+            sendWebSocketMessage('ping');
+        }, 30000); // 每30秒发一次心跳
+    };
+
+    ws.onmessage = function(e) {
+        console.log('接收到消息:', e.data);
+
+    };
+
+    // 连接关闭回调（自动重连）
+    ws.onclose = function(e) {
+        console.log('WebSocket连接关闭，正在重连...', e);
+        // 重连逻辑（避免断连后无法恢复）
+        webSocket = null
+        pingInterval && clearInterval(pingInterval);
+        setTimeout(initWebSocket, 3000);
+    };
+
+    // 错误处理
+    ws.onerror = function(err) {
+        console.error('WebSocket错误:', err);
+        if (checkAuth) {
+            checkAuth()
+        }
+        // ws.close();
+        webSocket = null
+        pingInterval && clearInterval(pingInterval);
+    };
+
+    return ws;
+}
+
+function sendWebSocketMessage(message) {
+    if (webSocket) {
+        webSocket.send(message);
+    }
+}
+
+initWebSocket();
+{{ end }}
