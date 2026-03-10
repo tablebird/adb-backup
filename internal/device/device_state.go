@@ -10,6 +10,7 @@ const (
 	StateDisconnected
 	StateOffline
 	StateOnline
+	StateAuthorizing
 	StateError
 )
 
@@ -19,6 +20,7 @@ var deviceStateStrings = map[adb.DeviceState]DeviceState{
 	adb.StateOffline:      StateOffline,
 	adb.StateOnline:       StateOnline,
 	adb.StateUnauthorized: StateUnauthorized,
+	adb.StateAuthorizing:  StateAuthorizing,
 }
 
 func (s DeviceState) String() string {
@@ -33,6 +35,8 @@ func (s DeviceState) String() string {
 		return "Online"
 	case StateUnauthorized:
 		return "Unauthorized"
+	case StateAuthorizing:
+		return "Authorizing"
 	default:
 		return "Error"
 	}
