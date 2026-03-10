@@ -25,12 +25,16 @@ type Device interface {
 	Name() string
 
 	State() DeviceState
+
+	GetDeviceDB() *database.Device
 }
 
 type ConnectDevice interface {
 	Device
 
 	initDeviceDB() error
+
+	GetDeviceDB() *database.Device
 
 	GetSync() sync.Sync
 
@@ -81,6 +85,10 @@ func (p *dbDevice) State() DeviceState {
 	return StateDisconnected
 }
 
+func (p *dbDevice) GetDeviceDB() *database.Device {
+	return p.deviceDB
+}
+
 type shellConnectDevice struct {
 	dbDevice
 
@@ -117,6 +125,10 @@ func (p *shellConnectDevice) State() DeviceState {
 		return StateError
 	}
 	return deviceStateToStr(state)
+}
+
+func (p *shellConnectDevice) GetDeviceDB() *database.Device {
+	return p.deviceDB
 }
 
 func (p *shellConnectDevice) GetTelephony() telephony.TelephonyManager {
@@ -270,6 +282,6 @@ func (p *shellConnectDevice) GetSync() sync.Sync {
 	if p.State() != StateOnline {
 		return nil
 	}
-	p.sync = sync.NewSmsSync(p.deviceDB, p.shell, notify.Notify)
+	p.sync = sync.NewSmsSync(p.deviceDB, p.shell, notify.GetNotify())
 	return p.sync
 }

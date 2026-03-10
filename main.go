@@ -14,12 +14,7 @@ func main() {
 	log.InfoF("服务启动中....")
 
 	config.InitConfig()
-	url := config.App.NotifyWebhookUrl
-	if len(url) != 0 {
-		notify.Notify = notify.Webhook{
-			Url: url,
-		}
-	}
+	notify.InitNotify()
 	database.InitDB()
 	admin.InitAdmin()
 	go web.InitWeb()

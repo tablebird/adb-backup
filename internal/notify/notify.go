@@ -1,50 +1,52 @@
 package notify
 
 import (
+	"adb-backup/internal/config"
 	"adb-backup/internal/database"
 	"adb-backup/internal/log"
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 )
 
-var Notify Interface
+var notify Interface
+
+func GetNotify() Interface {
+	return notify
+}
 
 type Interface interface {
 	NotifySms(database.Sms) (bool, error)
+
+	NotifyDeviceStatus(dev *database.Device, status string, ty string) (bool, error)
 }
 
-type Webhook struct {
-	Url string
+func InitNotify() {
+	conf := config.Notify
+	if conf.NotifyWebhookUrl == "" && conf.NotifyStatusWebhookUrl == "" {
+		log.Info("未配置通知功能")
+		return
+	}
+	notify = webhook{
+		Url:             conf.NotifyWebhookUrl,
+		DeviceStatusUrl: conf.NotifyStatusWebhookUrl,
+	}
 }
 
-func (w Webhook) NotifySms(s database.Sms) (bool, error) {
+type webhook struct {
+	Url             string
+	DeviceStatusUrl string
+}
+
+func (w webhook) NotifySms(s database.Sms) (bool, error) {
 	if s.SmsType != 1 {
 		return false, errors.New("not received sms")
 	}
+	if len(w.Url) == 0 {
+		return false, errors.New("notify webhook url is empty")
+	}
 	str := fmt.Sprintf(`{"uid": "%s", "address": "%s", "body": "%s"}`, s.Uid, s.Address, s.Body)
 	log.DebugF("notifySms : %s", str)
-	data := []byte(str)
-	resp, err := http.Post(w.Url, "application/json", bytes.NewBuffer(data))
-	if err != nil {
-		log.ErrorF("WebHook: %s", err)
-		return false, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		log.ErrorF("WebHook: %s", resp.Status)
-		return false, errors.New(resp.Status)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.ErrorF("WebHook: %s", err)
-		return false, err
-	}
-	var result map[string]interface{}
-	err = json.Unmarshal(body, &result)
+	result, err := postWebhookJsonStr(w.Url, str)
 	if err != nil {
 		log.ErrorF("WebHook: %s", err)
 		return false, err
@@ -52,4 +54,14 @@ func (w Webhook) NotifySms(s database.Sms) (bool, error) {
 	uid := result["uid"]
 
 	return uid == s.Uid, nil
+}
+
+func (w webhook) NotifyDeviceStatus(device *database.Device, status string, ty string) (bool, error) {
+	if len(w.DeviceStatusUrl) == 0 {
+		return false, errors.New("notify status webhook url is empty")
+	}
+	str := fmt.Sprintf(`{"id": "%s", "serial": "%s", "name": "%s", "status": "%s", "type": "%s"}`, device.Id, device.Serial, device.BuildName(), status, ty)
+	log.DebugF("notifyDeviceStatus : %s", str)
+	_, err := postWebhookJsonStr(w.DeviceStatusUrl, str)
+	return err == nil, err
 }

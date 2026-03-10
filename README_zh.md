@@ -14,6 +14,7 @@ Adb Backup
 -----------------
 
 ```go
+cp example.env .env
 go mod download
 // 构建二进制
 // go build
@@ -45,6 +46,7 @@ docker 镜像 `tablebird/adb-backup`
 - `READ_INTERVAL` 读取消息得间隔 （默认 5s）
 - `WAIT_DEVICE_INTERVAL` 等待Android设备连接的检测间隔 （默认 10）
 - `NOTIFY_WEBHOOK_URL` 开始监听后新的短信的POST通知地址 （默认 空 不通知）
+- `NOTIFY_STATUS_WEBHOOK_URL` 状态通知地址 (默认 空 不通知)
 - `WEB_ADDRESS`: web服务监听地址 （默认: all/0.0.0.0）
 - `WEB_PORT` web服务监听端口 （默认 8080）
 - `ADMIN_NAME` 管理员初始用户名 (默认: admin)

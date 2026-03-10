@@ -16,6 +16,7 @@ type DeviceInfo struct {
 	Name           string
 	Index          int
 	Status         string
+	StatusNotify   bool
 	Sync           bool
 	Sims           []SimInfo
 	WiFiConnected  bool
@@ -46,6 +47,10 @@ func DevicesInfo() gin.HandlerFunc {
 				Name:   item.Name(),
 				Index:  i,
 				Status: item.State().String(),
+			}
+			deviceDB := item.GetDeviceDB()
+			if deviceDB != nil {
+				deviceInfo.StatusNotify = deviceDB.StatusNotify
 			}
 			if item.State() == device.StateOnline {
 				onlineCount++

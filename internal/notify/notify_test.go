@@ -33,7 +33,7 @@ func TestNotifySms(t *testing.T) {
 	}))
 	defer server.Close()
 
-	webhook := Webhook{
+	webhook := webhook{
 		Url: server.URL,
 	}
 	sms := database.Sms{

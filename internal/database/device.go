@@ -14,6 +14,7 @@ type Device struct {
 	Usb           string `gorm:"comment:设备USB信息"`
 	Manufacturer  string `gorm:"comment:设备制造商"`
 	MarketingName string `gorm:"comment:设备营销名称"`
+	StatusNotify  bool   `gorm:"comment:设备状态通知"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -62,4 +63,8 @@ func UpdateDevice(device *Device) error {
 
 func UpdateDeviceId(id string, newId string) error {
 	return db.Model(&Device{}).Where("id = ?", id).Update("id", newId).Error
+}
+
+func UpdateDeviceStatusNotify(id string, statusNotify bool) error {
+	return db.Model(&Device{}).Where("id = ?", id).Update("status_notify", statusNotify).Error
 }

@@ -12,6 +12,7 @@ var configs = []config{
 	&Web,
 	&Ldap,
 	&Feature,
+	&Notify,
 }
 
 type config interface {

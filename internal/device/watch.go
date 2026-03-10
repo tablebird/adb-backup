@@ -4,6 +4,7 @@ import (
 	"adb-backup/internal/config"
 	"adb-backup/internal/database"
 	"adb-backup/internal/log"
+	"adb-backup/internal/notify"
 	"sync"
 
 	adb "github.com/tablebird/goadb"
@@ -69,6 +70,7 @@ func StartWatch() {
 	for e := range watcher.C() {
 		log.DebugF("设备[%s]  %s > %s", e.Serial, e.OldState, e.NewState)
 		if e.CameOnline() {
+			_, exist := deviceSerialMap[e.Serial]
 			device := client.Device(adb.DeviceWithSerial(e.Serial))
 			deviceInfo, err := device.DeviceInfo()
 			if err == nil {
@@ -76,12 +78,35 @@ func StartWatch() {
 			} else {
 				log.ErrorF("设备[%s] 获取设备信息失败: %v", e.Serial, err)
 			}
+			// 首次启动时，会检测到已经连接的设备，此时不发送在线通知
+			if exist {
+				phone := deviceSerialMap[e.Serial]
+				notifyDeviceOnline(phone, true)
+			}
 		} else if e.WentOffline() {
 			log.InfoF("设备[%s] 已断开连接", e.Serial)
+			phone := deviceSerialMap[e.Serial]
+			notifyDeviceOnline(phone, false)
 		}
 	}
-	watcher.Err()
 	log.FatalF("设备监听已关闭[%s]", watcher.Err().Error())
+}
+
+func notifyDeviceOnline(phone ConnectDevice, online bool) {
+	notif := notify.GetNotify()
+	if notif == nil {
+		return
+	}
+
+	deviceDB := phone.GetDeviceDB()
+
+	if deviceDB != nil && deviceDB.StatusNotify {
+		if online {
+			notif.NotifyDeviceStatus(deviceDB, "连接", "connect")
+		} else {
+			notif.NotifyDeviceStatus(deviceDB, "断开", "connect")
+		}
+	}
 }
 
 func scanAllDevices() {

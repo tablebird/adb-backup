@@ -71,7 +71,9 @@ func InitWeb() {
 	deviceConnectGroup.GET("/api/screen", screen.ScreenView())
 	deviceConnectGroup.GET("/api/screenCap", screen.ScreenCap())
 
-	r.POST("/api/sms/send", smsApi.SendMessage())
+	group.POST("/api/device/statusNotify", deviceApi.EnableStatusNotify())
+
+	group.POST("/api/sms/send", smsApi.SendMessage())
 
 	port := config.Web.WebPort
 	address := config.Web.Address
