@@ -30,6 +30,12 @@ docker images `tablebird/adb-backup`
 
 example: [docker-compose.yml](./docker-compose.yml)
 
+### Build Docker Image
+
+```bash
+docker build -t tablebird/adb-backup .
+```
+
 ## Environment Variables and Default Values
 
 - `ADB_HOST`: adb server host (default: localhost), Prioritize connecting to adb services for this host address

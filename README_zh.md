@@ -31,6 +31,12 @@ docker 镜像 `tablebird/adb-backup`
 
 示例：[docker-compose.yml](./docker-compose.yml)
 
+### 构建docker镜像
+
+```bash
+docker build -t tablebird/adb-backup .
+```
+
 环境变量以及默认值
 -----------------
 
