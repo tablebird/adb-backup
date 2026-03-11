@@ -34,8 +34,6 @@ type ConnectDevice interface {
 
 	initDeviceDB() error
 
-	GetDeviceDB() *database.Device
-
 	GetSync() sync.Sync
 
 	GetTelephony() telephony.TelephonyManager
@@ -125,10 +123,6 @@ func (p *shellConnectDevice) State() DeviceState {
 		return StateError
 	}
 	return deviceStateToStr(state)
-}
-
-func (p *shellConnectDevice) GetDeviceDB() *database.Device {
-	return p.deviceDB
 }
 
 func (p *shellConnectDevice) GetTelephony() telephony.TelephonyManager {
