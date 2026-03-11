@@ -84,6 +84,13 @@ func (p *dbDevice) State() DeviceState {
 }
 
 func (p *dbDevice) GetDeviceDB() *database.Device {
+	if p.deviceDB != nil {
+		device, err := database.FindDeviceById(p.deviceDB.Id)
+		if err != nil {
+			return nil
+		}
+		p.deviceDB = &device
+	}
 	return p.deviceDB
 }
 
